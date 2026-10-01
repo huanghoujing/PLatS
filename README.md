@@ -18,6 +18,15 @@ tar -xzf PLatS_progress_prize.tar.gz
 cd PLatS
 ```
 
+## Full released-test predictions
+
+[Download index](predictions/README.md): all 106 released Kaggle test cases,
+including **9,168 prompted sheet masks** (1/2/4/8 points, three checkpoints),
+**1,272 prompted unions**, and **318 automatic instance predictions**.
+The primary checkpoint is 0058; 0076 and 0076+100k are supplementary.
+NIFTIs, point coordinates, scores and checksums are supplied as separate release
+assets. These are the released former hidden-test cases, not a fresh blind test.
+
 ## Start here
 
 Use Python 3.12 and an NVIDIA GPU supporting BF16. Tested software versions are
