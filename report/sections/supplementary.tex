@@ -1,0 +1,303 @@
+\section{Exact objectives and implementation}
+\label{supp:losses}
+\input{sections/model_details}
+\subsection{Loss definitions and architecture settings}
+For a probability map $Q$, binary target $S$, valid voxel set $\Omega$ and
+positive BCE weight $\omega$, the segmentation loss in the main text is
+\begin{align}
+ \mathcal L_{\rm seg}^{\Omega}&=\mathcal L_{\rm BCE}^{\Omega}
+                                  +\mathcal L_{\rm Dice}^{\Omega},\nonumber\\
+ \mathcal L_{\rm BCE}^{\Omega}&=-\frac{1}{|\Omega|}\sum_{v\in\Omega}
+ \left[\omega S_v\log Q_v+(1-S_v)\log(1-Q_v)\right],\nonumber\\
+ \mathcal L_{\rm Dice}^{\Omega}&=1-
+ \frac{2\sum_{v\in\Omega}Q_vS_v+\epsilon}
+ {\sum_{v\in\Omega}Q_v+\sum_{v\in\Omega}S_v+\epsilon}.
+ \label{eq:segexact}
+\end{align}
+$Q_v=Q(v)$ and $S_v=S(v)$; $v$ indexes voxels and $\epsilon=10^{-6}$ stabilizes the Dice ratio.
+Without the superscript, all voxels are valid. AE BCE uses
+$\omega=\min(20,\max(1,N_-/\max(N_+,1)))$, where $N_+$ and $N_-$ count
+foreground/background voxels in the training batch. Intermediate targets use
+max pooling to the head resolution. The joint binary head uses $\omega=2$;
+ignore is removed from both Dice sums, and empty-target crops contribute BCE
+but are excluded from the batch Dice average.
+
+In Eq.~\ref{eq:aeloss}, the four intermediate weights are
+$\alpha=(0.125,0.25,0.5,0.5)$ and
+$(\lambda_U,\lambda_q,\lambda_r,\lambda_o,\lambda_b)
+=(0.15,0.15,0.1,0.05,0.05)$.
+Smooth L1 uses transition width 0.1 and averages over dense voxels or query
+samples. The penalties are
+\begin{equation}
+ R_o=\frac{\sum_{v\notin\operatorname{dilate}_2(S)}Q(v)}{\max(|S|,1)},\qquad
+ R_b=\frac{\sum_{v\in\partial_5}Q(v)}{\max(|S|,1)}.
+\end{equation}
+$\operatorname{dilate}_2$ is a cubic two-voxel dilation and $\partial_5$ is the
+five-voxel crop border. Cosine similarity flattens the latent tensor.
+AE input corruption is applied with probability 0.7: one to six spherical
+holes of radius 2--10 voxels and dropout up to 0.3, retaining at least 25\%
+of the sheet. The unsigned-distance query head uses 8,192 queries.
+
+The AE uses convolutional channels $(8,16,24,32,48,64)$, RMS normalization,
+and factor-32 reduction; its distance-query MLP has width 128.
+The CT encoder channels are $(16,32,96,192,384,512)$, with an early
+factor-four stem. Point Fourier encoding has eight bands. Context and
+point-refinement attention each have four blocks, 512-dimensional features
+and per-axis rotary coordinates; refinement uses eight heads.
+The joint binary branch has its own four-block refiner and convolutional
+decoder channels $(512,256,128,64,32,16)$. Dense auxiliary training decodes
+$5^3$ context crops into $160^3$ masks, while sheet codes retain the $320^3$
+crop extent. All main-model checkpoint, configuration and latent-statistics
+hashes accompany the result snapshot.
+The AE and main CT model use Kaggle-derived t6 training labels with topology
+repair/cleanup; external scroll labels are excluded from the main model.
+Evaluation uses the released test annotations, not those repaired training
+labels. Training-ID exclusion alone does not certify spatial disjointness.
+Cached CT inputs share five-voxel image-border zeroing; GT borders are retained.
+
+\section{Automatic clustering and instance diagnostics}
+\paragraph{Figure 3: measured inference intermediates.}
+We reuse case 00860 and its central native $z=160$ section, as in the binary
+failure example. The frozen automatic run provides all 512 seed coordinates,
+foreground and final instances. A forward replay with the same 0058 checkpoint,
+BF16 precision and seed batch size 32 captures the CT context and all
+64,000-dimensional point codes. Replayed retained-cluster sizes match the
+saved inference log. Colors identify final instances after duplicate handling,
+so multiple retained clusters may share a color. Gray codes belong to discarded
+clusters; their exclusion is not hidden from the plot.
+CT seed markers use the $z\pm12$ slab for visibility, whereas the CT and mask
+images use the exact central plane. The feature panel shows channel RMS of
+the cached $10^3$ CT context at the corresponding depth, without interpolation.
+The code panel uses deterministic PCA over all 512 codes; its two components
+explain 27.8\% of variance. This projection is for display only: the algorithm
+clusters in full code space. It need not visibly separate all sheet identities.
+Native arrays, point codes, assignments and source hashes accompany the figure.
+
+\paragraph{Measured latent identity separation.}
+Each of the eight fixed GT coordinates per band is queried separately, yielding
+6,112 single-point codes across all 106 cubes. Distance uses the complete
+normalized code, without decoding or threshold calibration. GT connected bands
+provide analysis identities, rather than physical-sheet guarantees.
+\input{tables/latent_separability}
+The same-band p90 is 1.682, so the tails overlap substantially despite separated
+medians. These spatially spread GT points include difficult crop-edge locations
+and differ from the automatic foreground-seed distribution. Pairwise rejection
+is not the fraction of points excluded by leader clustering; nearest-neighbor
+links and cluster means affect assignment. Results support useful separation
+while identifying remaining point-conditioning errors.
+
+The controlled foreground proposer is frozen model 0022, shared across all
+checkpoints; it is separate from their jointly trained binary heads.
+Foreground probability threshold is 0.6, with 512 uniformly sampled voxels.
+One cached CT context serves all single-point latent predictions. Sequential
+leader clustering joins the nearest cluster mean at latent MSE $\le0.02$;
+otherwise it creates a new cluster. Clusters with eight or fewer points are
+discarded. For seven eight-point subset predictions $u_t$, define
+\begin{equation}
+ r_t=\min_{s\ne t}d(u_t,u_s),\qquad r_{\min}=\min_t r_t.
+\end{equation}
+Here $s,t\in\{1,\ldots,7\}$ index subsets, and $d$ is normalized latent MSE
+as in the main text. Candidates with $r_{\min}>0.008$ are discarded;
+otherwise all seven codes are averaged and decoded once at threshold 0.5.
+The rule checks subset agreement, not certified physical identity.
+
+Each automatic decode retains its largest six-connected component.
+Three-voxel dilation with overlap-cover threshold 0.2 suppresses duplicate
+masks; predicted probability assigns contested voxels, and final IDs below
+500 voxels are removed. Thus the automatic benchmark includes cleanup,
+whereas raw prompted topology does not. Both small and unstable point clusters
+are excluded from reconstruction. Leader order and fixed latent thresholds
+remain limitations.
+
+Tables~\ref{tab:auto} and~\ref{tab:autoinst} retain all automatic checkpoint
+results on the 106 cases. The unfiltered common-foreground CC6 baseline is
+not a matched-cleanup architecture ablation. Instance accuracy at IoU threshold
+$\tau$ is TP/(TP+FP+FN), using greedy one-to-one annotated-band matching;
+TP, FP and FN are matched predictions, unmatched predictions and missed bands.
+It is not integrated AP. GT-normalized IoU sums matches at 0.5 and assigns zero
+to unmatched GT bands. Merges count predicted majority-overlap claimants for
+multiple GT bands; splits count GT bands receiving multiple majority claimants.
+Annotation components are proxies, not certified physical-sheet identities.
+
+\input{tables/automatic_union}
+\input{tables/automatic_instances}
+
+\section{External data and continued training}
+\label{supp:checkpoints}
+The two additional checkpoints investigate whether large-scale external data
+and prolonged training help generalization to new scrolls.
+\textbf{0076} initializes from Kaggle-only 0058 and adds mesh-derived
+scroll patches, totaling 10,347 spatially overlapping training patches.
+It adds latent coordinate-distance supervision, with query emphasis near mesh
+vertices. \textbf{0076+100k} continues for 100,000 steps with geometric
+consistency. All three retain the same frozen AE. Changed data, objectives and
+training duration prevent a causal attribution to any one factor.
+
+For the mixed-data query term, the frozen AE head $h$ supplies a teacher
+prediction at query $q$ from clean code $E(S_i)$; Smooth L1 regresses the predicted
+code's query output toward that teacher. The continuation additionally compares
+aligned decoded probabilities under flips and right-angle rotations:
+\begin{equation}
+ \mathcal L_{\rm geo}=1-
+ \frac{2\langle A_g,B_g\rangle+1}{\|A_g\|_2^2+\|B_g\|_2^2+1}.
+\end{equation}
+$A_g$ and $B_g$ are original/transformed $160^3$ probability blocks after inverse
+alignment; inner products and norms sum voxels. A nonidentity transform is
+sampled each step from the 16-element in-plane dihedral and axial-flip group.
+Corresponding $5^3$ code crops are decoded, with gradients through both branches
+and the frozen decoder. The consistency weight is 0.5.
+AdamW uses stem, encoder, dense-head and other learning rates
+$10^{-6},3\times10^{-6},10^{-5},5\times10^{-6}$, weight decay 0.02,
+1,000 warmup steps and cosine decay to 10\% of their initial rates.
+These settings allow intermediate checkpoint evaluation without relying on a
+near-zero terminal learning rate.
+
+\section{Full prompt-count and topology results}
+Of the 106 released test cubes, 102 are $320^3$ and four are $256^3$.
+Training-case IDs are disjoint; this does not establish spatial disjointness
+within a scroll. The first-place baseline uses its released four-model
+ensemble and postprocessing unchanged; only GPU routing is adapted.
+Across 764 raw eight-point sheet predictions, mean $(b_0,b_1,b_2)$ is
+$(1.183,0.165,0)$. After source-ignore erasure, mean $b_0$ rises to 22.857
+and mean $b_1$ to 32.191. These whole-mask counts differ from matched TopoScore.
+Here $b_0,b_1,b_2$ count components, tunnels and cavities under six-connected
+foreground. In the selected binary failure crop, the raw winner union has
+125 tunnels and the automatic PLatS union has three; this example is diagnostic,
+not a representative estimate.
+
+Eight spatially spread positive GT points are fixed per eligible annotated
+band, with nested prefixes $K\in\{1,2,4,8\}$ identical across checkpoints.
+The complete matrix has $3\times4\times764=9,168$ sheet tuples and 1,272
+checkpoint/prompt/case unions. Smaller native cubes are centered with
+32-voxel padding; masks, points and scores are cropped back. Every tuple has
+aligned image, prompt, GT, prediction and ignore NIFTIs.
+
+The prompted diagnostic ignores only the exterior of the rectangular
+annotated-region box, retaining source-ignore regions \emph{inside} that box
+as GT background. This avoids inward erasure cuts but is distinct from the
+standard LB and restoration tables in the main text. Raw masks receive no
+cleanup. Union GT includes annotated bands below the 10,000-voxel prompt
+eligibility threshold. Tables~\ref{tab:promptmatrix} and~\ref{tab:unionmatrix}
+retain Dice and all three formula terms for every prompt count.
+
+\input{tables/prompt_matrix}
+\input{tables/union_matrix}
+\input{tables/raw_topology}
+
+Table~\ref{tab:topology} counts raw topology before erasure. All three median
+per-sheet vectors are $(1,0,0)$, while mean union tunnel counts expose outlier
+contacts between decoded sheets. For 0058 the mean raw union $b_1$ is 63.292
+but its median is one: mean counts must not be read as typical defects per
+crop. The GT component construction also favors disk-like masks.
+$P_{100}$ denotes fraction $(1,0,0)$ and is not proof of geometric correctness.
+Exact TopoScore uses spatial Betti matching over eight crop octants, not a
+comparison of whole-mask counts alone.
+Our compact exact implementation reduces storage without approximating the
+matching calculation. Formula arithmetic, 106-case coverage, native prompt
+membership and unchanged checkpoint hashes are verified. Paired bootstrap
+results average sheets within each case and resample 106 cases 2,000 times
+(seed 42); source files preserve all intervals. Spatial dependence and prior
+inspection limit their statistical interpretation.
+
+\section{Restoration controls and failure provenance}
+Preserve each predicted identity \emph{before} erasure. Let $A_i$ be its full
+mask, $I$ the source-ignore mask, and $v_i=|A_i\setminus I|$ its visible size.
+The restored, filtered binary union is
+\begin{equation}
+ A^{\rm rest}=\bigcup_{i:\ v_i>0,\ |A_i|\ge5000} A_i,\qquad
+ J_{\rm rest}=J(A^{\rm rest},G\setminus I).
+ \label{eq:restore}
+\end{equation}
+$|\cdot|$ denotes voxel count. Entirely ignored instances are excluded; the
+5,000-voxel gate uses \emph{full size after restoration}. GT remains erased,
+and restored predictions are not erased a second time. For the binary winner,
+identities are its raw six-connected components; PLatS supplies predicted IDs.
+The rule uses no GT foreground to select or complete a prediction.
+Table~\ref{tab:modified} reports the same three formula terms after this change.
+This is \emph{not official LB}: restored foreground can be penalized against
+unknown GT background, and raw binary components are imperfect sheet proxies.
+Filtering-only controls and a topology-isolation diagnostic are in Supplementary.
+
+
+\input{tables/restoration_controls}
+The filtering-only control erases ignore after applying the same full-size
+ID gate. The full restoration metric is Eq.~\ref{eq:restore}, including any
+Surface Dice or VOI penalties for retained unknown foreground. To isolate the
+changed topology term, we additionally report
+\begin{align}
+ J_{\rm topo\text{-}only}={}&0.35\,\mathrm{SD}_2(A^{\rm rest}\setminus I,G')\nonumber\\
+ &+0.30\,\mathrm{Topo}(A^{\rm rest},G')\nonumber\\
+ &+0.35\,\mathrm{VOI}(A^{\rm rest}\setminus I,G').
+\end{align}
+where $G'=G\setminus I$. This hybrid is a separate non-official diagnostic;
+it is not the modified LB table in the main paper.
+
+Failure examples use saved masks, never synthetic surfaces. The binary example
+uses a visually clear lamellar CT cross-section among the top 20 cached
+winner merger candidates. The central TIFF-stack slice is used, with a
+four-connected winner region joining distinct GT bands. The ignore example maximizes induced tunnel count among raw $(1,0,0)$
+0058 masks with visible support. Source hashes, selection metadata, native
+voxels and slice coordinates are saved in the failure-analysis run. Selection
+is diagnostic, not random or representative. Figures 4 and 6 show native 2D
+slices with nearest-neighbor display, using the same plane and crop across
+methods. TIFF arrays are $[z,y,x]$ and project arrays are $[x,y,z]$;
+a displayed $z$ slice is the transpose of internal array $[:,:,z]$.
+CT panels are verified directly against the original TIFF pages.
+The ignore-cut slice maximizes disconnected visible components among
+continuous raw $z$ sections with at least 1,000 foreground and 20 removed voxels.
+Counts in the main caption use the exact whole-volume voxel V construction;
+a displayed 2D interruption alone does not establish a 3D tunnel.
+
+\begin{figure*}[t]
+ \centering\includegraphics[width=\textwidth]{figures/binary_failure_zoom.png}
+ \caption{Enlarged native slice from the main-paper binary failure
+ example: the same $90\times90$-pixel crop at TIFF $z=160$ in all four columns.
+The winner component connects distinct GT bands; automatic PLatS has lower
+ coverage. Twenty-seven predicted voxels in the sampled gap are known background;
+ none of its 34 samples are ignored. The red dashed segment marks this sampled
+ gap in GT and winner panels. Labels are displayed without dilation or smoothing.}
+\end{figure*}
+
+\section{Large pages and spiral-fitting integration}
+\input{tables/large_pages}
+The large-page main-paper figure uses \emph{0058} on the same two preselected
+PHerc0139 regions as our earlier downstream control. Native sampling is
+9.362~\textmu m; patch size 320 and step 128 give 60\% linear overlap.
+The first decoded prediction defines a tangent frame; later points come from
+accepted predictions. An overlap acceptance gate can reject ambiguous growth,
+so accepted join error is conditional on acceptance and is not a global
+geometric error. Independent SLIM retains holes in predicted chart support.
+The inward normal is fixed from the scroll umbilicus before ink inference;
+full inward/outward PNGs are preserved. Geometry and partial ink labels enter
+only after all reconstruction/ink hashes are frozen. The known ink-model scroll
+and potentially overlapping external training regions are not held-out
+transcription tests.
+On page A, the single-method supported-pixel ink AP/Dice are 0.9170/0.8294;
+labeled coverage is 17.37\% and delivered Dice is 0.2932. These supported pixels
+are not the common-pixel set used in the integration comparison below.
+
+An earlier integration pilot, using original \emph{0076}, compares the direct
+prediction, published m7 tracks passed to the official spiral fitter, PLatS
+patches alone, and tracks plus PLatS patches. All fits have the same 30,000-step
+budget, canonical initialization, independent flattening and frozen ink.
+The published tracks have \emph{unverified Kaggle-winner provenance}; this is
+not the first-place model comparison. Two predicted local charts alone leave
+global fitting underconstrained. We retain these controls to demonstrate an
+integration route, not an upper bound on the published fitting method.
+
+\input{tables/spiral_integration}
+\begin{figure*}[t]
+ \centering\includegraphics[width=\textwidth]{figures/spiral_integration.png}
+ \caption{Large-page spiral integration control on PHerc0139 page A, original
+ 0076 (Supplementary only). Direct prediction, published-track fitting,
+ prediction-only fitting and mixed-input fitting all use independent layouts
+ and the same ink model. The track source is not verified as the Kaggle winner.}
+ \label{fig:spiral}
+\end{figure*}
+Ink AP and Dice in Table~\ref{tab:spiralintegration} use the same 26,296
+fully supported labeled pixels across all four arms. Labeled coverage and
+``delivered'' Dice also count missing output, assigning zero to missing
+predictions. Pairwise comparisons use different common pixel sets and must
+not be mixed with the all-arm table. Page B has no audited ink labels.
+High common-pixel scores on a small delivered fraction do not establish
+whole-page letter recovery. This pilot studies integration and drift.

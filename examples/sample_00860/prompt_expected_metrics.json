@@ -1,0 +1,45 @@
+{
+  "ae_reconstruction_dice": 0.9079343173854147,
+  "canvas_offset_zyx": [
+    0,
+    0,
+    0
+  ],
+  "case_id": "sample_00860",
+  "checkpoint_step": 106050,
+  "conversion_border_width": 0,
+  "dice": 0.27979736511423897,
+  "gt_components_scored": 1,
+  "gt_voxels_scored": 300750,
+  "ignore_policy": "border_box",
+  "latent_normalized_mse": 0.1306612640619278,
+  "latent_raw_mse": 0.021678859367966652,
+  "latent_relative_mse": 0.0901532918214798,
+  "leaderboard_formula_score": 0.51309073193911,
+  "pred_components_raw": 1,
+  "pred_components_scored": 1,
+  "pred_voxels_scored": 331915,
+  "prompt_id": "p00",
+  "scoring_box_zyx": [
+    [
+      3,
+      317
+    ],
+    [
+      3,
+      317
+    ],
+    [
+      3,
+      317
+    ]
+  ],
+  "sheet_id": 9,
+  "surface_dice_tau2": 0.6955835883627358,
+  "threshold": 0.5,
+  "toposcore": 0.0,
+  "tuple_dir": "cases/sample_00860/sheets/sheet_0009/p00",
+  "voi_merge": 0.5103153864787173,
+  "voi_score": 0.7703899314632928,
+  "voi_split": 0.4831644915209927
+}

@@ -1,0 +1,18 @@
+{
+  "binary_threshold": 0.6,
+  "sheet_threshold": 0.5,
+  "min_component_voxels": 500,
+  "cluster_points": 512,
+  "cluster_mse_threshold": 0.02,
+  "cluster_min_points": 8,
+  "prompt_points_per_sheet": 8,
+  "candidates_per_cluster": 8,
+  "cluster_subset_knn": 7,
+  "cluster_subset_knn_neighbors": 1,
+  "cluster_subset_knn_fuse": 7,
+  "cluster_drop_mse": 0.008,
+  "dedup_dilate_voxels": 3,
+  "dedup_cover": 0.2,
+  "verify_overlap_iou": 0.0,
+  "seed": 0
+}

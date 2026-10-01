@@ -1,0 +1,106 @@
+target_ae:
+  config_path: configs/ae.yaml
+  checkpoint_path: weights/ae.pt
+  trainable: false
+  deduplicate_frozen_pair_targets: true
+p2sd:
+  image_channels: 1
+  encoder_channels:
+  - 16
+  - 32
+  - 96
+  - 192
+  - 384
+  - 512
+  image_context:
+    type: self_attn
+    depth: 4
+    pos_encoding: rope
+    rope_mode: per_axis
+  prompt_composition:
+    sampler:
+      n_pos: 8
+      n_neg: 0
+      neg_source: background_or_other_sheet
+      n_pos_range:
+      - 1
+      - 8
+    type: point_feature_mlp
+    point_pe: fourier
+    point_pe_num_bands: 8
+    sampled_feature: image_tokens_trilinear
+    fusion: none
+  prompt_modulator:
+    type: prefix_attn
+    merge: concat
+  refiner:
+    type: self_attn
+    dim: 512
+    depth: 4
+    heads: 8
+    pos_encoding: rope
+    mlp: swiglu
+    attention: sdpa
+    mlp_ratio: 4.0
+  loss:
+    per_round_mse_weights:
+    - 0
+    - 0.5
+    - 1
+    - 1
+    decoded_bce_weight: 0.0
+    decoded_bce_interval_steps: 256
+    decoded_bce_warmup_steps: 0
+    decoded_pos_weight: auto
+    decoded_max_auto_pos_weight: 24
+    same_sheet_prompt_consistency_weight: 0.5
+    latent_normalization:
+      enabled: true
+      mode: global_channel
+      predict_normalized: true
+      stats_path: configs/latent_stats.json
+      eps: 1.0e-06
+    per_round_mse_weights_mode: original
+    coordinate_query:
+      enabled: false
+      weight: 0.0
+      num_points: 8192
+      smooth_l1_beta: 0.1
+      sampling: balanced_regions
+      band_voxels: 8.0
+      inside_fraction: 0.3333333333333333
+      near_outside_fraction: 0.3333333333333333
+    different_sheet_prompt_contrast_weight: 0.25
+    different_sheet_prompt_contrast_margin: 1.0
+  pair_sampling:
+    pairs_per_step: 4
+    sample_with_replacement: true
+    min_voxels_per_sheet: 1000
+    selection_mode: uniform
+    max_components_per_sample: 2
+    component_select_mode: random
+  encoder_stem: patchify
+  encoder_patch_size: 4
+  encoder_patch_stem: early_conv
+  freeze_image_encoder: false
+  freeze_image_encoder_through_stage: -1
+  dense_aux:
+    weight: 1.0
+    crop_grid: 5
+    bce_weight: 1.0
+    dice_weight: 1.0
+    pos_weight: 2.0
+    decoder_channels:
+    - 512
+    - 256
+    - 128
+    - 64
+    - 32
+    - 16
+    num_groups: 8
+    dropout: 0.0
+    refiner:
+      depth: 4
+      heads: 8
+      mlp_ratio: 4.0
+      rope_mode: per_axis

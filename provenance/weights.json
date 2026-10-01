@@ -1,0 +1,26 @@
+{
+  "ae": {
+    "run": "0032_ae_t6_denoise_repel_e150_r1",
+    "original_sha256": "7c50584852d194a5dd29bc1a4868e7488f88925c55e1303935f3f1042be226e2",
+    "inference_sha256": "d677d01be344c37cb15510decc8bf78946ca139e1e8e526a47b1366485787f25",
+    "tensors": 112,
+    "step": 35400,
+    "tensor_equality_verified": true
+  },
+  "p2sd": {
+    "run": "0058_p2sd_joint_dense_ps160_warm0033_e150",
+    "original_sha256": "09cae7385a3d1b60e90cd8729464e5b686e35ccdb0bde1e135367e477bf060e5",
+    "inference_sha256": "171e56792d06f80db0d07a65456a15a1c0dd3534bb3485c3b62e5b9f057b6c06",
+    "tensors": 172,
+    "step": 106050,
+    "tensor_equality_verified": true
+  },
+  "foreground": {
+    "run": "0022_binseg_ps320_ctxattn4_rope_frozen0021_ft200",
+    "original_sha256": "af70bf0fab5c364d372a84925b5621326c73251b8127d1ae9fdecea13427d75f",
+    "inference_sha256": "0b4c088e2dbb1df4273d7cf2fa35bf268678c623475aa5a7dd49846f780f567c",
+    "tensors": 280,
+    "step": 70600,
+    "tensor_equality_verified": true
+  }
+}

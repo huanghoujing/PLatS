@@ -1,0 +1,81 @@
+\section{Method}
+\label{sec:method}
+
+A few false-positive voxels can join neighboring papyrus sheets in a binary
+mask. The Kaggle winner identifies touching sheets as an unresolved
+problem~\cite{vesuviuswinner}. We represent each sheet separately in a learned
+latent space. The code serves two purposes: it describes the sheet's shape
+and identifies which prompt points belong together.
+Learned shape priors have precedents~\cite{oktay2017acnn,yi2019gspn}; our focus
+is a shared thin-sheet representation for reconstruction and instance discovery.
+
+\subsection{Learn a sheet representation}
+An autoencoder learns to reconstruct a clean sheet mask $S$ from its corrupted
+version $\widetilde S$:
+\begin{equation}
+ z=E(\widetilde S),\qquad Q=\sigmoid(D(z)).
+ \label{eq:aesimple}
+\end{equation}
+$E$ is the sheet encoder, $z$ its latent code, $D$ the occupancy decoder,
+and $Q$ the reconstructed probability map; $\sigmoid$ is the sigmoid function.
+There are no encoder--decoder skip connections: the shape must pass through
+$z$ (Fig.~\ref{fig:ae}). Occupancy heads use BCE and Dice losses;
+dense and point-query distance heads use Smooth L1 supervision.
+Different-sheet code repulsion and outside-sheet/border penalties regularize
+training. Exact heads, noise and loss weights are in Supplementary.
+No explicit topology loss is used.
+
+\begin{figure*}[t]
+ \centering\includegraphics[width=\textwidth]{figures/ae.pdf}
+ \caption{\textbf{Learn the sheet space.} Reconstruct a clean sheet from a
+ corrupted mask through a latent bottleneck. Auxiliary distance heads and
+ regularizers shape the representation. After training, freeze the AE.}
+ \label{fig:ae}
+\end{figure*}
+
+\subsection{Predict the code from CT and points}
+A CT encoder $C$ extracts a shared feature grid. A transformer $T$ combines
+these features with a set of positive points $P$ to predict a sheet code:
+\begin{equation}
+ \widehat z=T(C(X),P),\qquad
+ \widehat S=\mathbf1[\sigmoid(D(\widehat z))\ge 0.5].
+ \label{eq:predictsimple}
+\end{equation}
+$X$ is the CT crop, $\widehat z$ the predicted code, $\widehat S$ the binary
+sheet prediction, and $\mathbf1$ the indicator function.
+We train code prediction with MSE against the frozen AE's clean-sheet code;
+normalization is omitted here for clarity and defined in Supplementary.
+Same-sheet and different-sheet losses encourage consistent instance identity.
+A binary decoder $B$ shares the CT encoder and uses skip connections to
+predict the union of sheets, supervised by BCE and Dice (Fig.~\ref{fig:training}).
+The AE remains frozen, and the main point-to-sheet model needs no decoded
+occupancy loss during training.
+
+\begin{figure*}[t]
+ \centering\includegraphics[width=\textwidth]{figures/training.pdf}
+ \caption{\textbf{Learn point-to-sheet prediction.} CT and positive points
+ predict the frozen AE's sheet code. The binary branch jointly supervises
+ CT features. Blue modules are trained; gray modules are frozen.
+ The frozen sheet decoder is used to obtain the final mask at inference.}
+ \label{fig:training}
+\end{figure*}
+
+\subsection{Discover instances automatically}
+Sample foreground seeds from a binary proposer, encode CT once, and predict
+one code per seed. Cluster nearby codes using full-code MSE. For each retained
+cluster, combine consistent multi-point predictions and decode a sheet.
+Remove small components and duplicates, then assign overlapping voxels by
+predicted probability. Figure~\ref{fig:inference} shows an actual example.
+The benchmark uses 512 seeds per crop; thresholds and exclusions are in
+Supplementary. Raw prompted topology is measured before this cleanup.
+
+\begin{figure*}[t]
+ \centering\includegraphics[width=\textwidth]{figures/inference.pdf}
+ \caption{\textbf{Automatic inference on a real CT crop.}
+ Left to right: foreground seeds, cached CT features, predicted codes grouped
+ by identity, and decoded instances. The CT and output use the same native
+ $z$ slice of case 00860. The code plot is a 2D PCA display of all 512 measured
+ codes; clustering uses their full dimension. Gray points are discarded.
+ Colors link retained codes to final sheet IDs. See Supplementary for display details.}
+ \label{fig:inference}
+\end{figure*}

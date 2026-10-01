@@ -1,0 +1,11 @@
+Binary papyrus segmentation can connect neighboring sheets and create tunnels,
+making virtual unwrapping difficult even when voxel overlap is high.
+We introduce \pLatS{}: learn a latent representation of individual sheets,
+then predict it from CT and positive points with a transformer and MSE loss.
+The same codes support automatic seed clustering and instance reconstruction.
+On all 106 released Kaggle test cubes, 87.3\% of 764 eight-point predictions
+have one component and no tunnels or cavities before cleanup.
+We compare automatic segmentation with the Kaggle winner, distinguish model
+defects from cuts caused by ignored labels, and examine downstream geometry
+and ink on independently flattened, centimeter-scale surfaces.
+The learned representation favors simple sheet topology without guaranteeing it.

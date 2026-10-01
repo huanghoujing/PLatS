@@ -1,0 +1,67 @@
+\subsection{Autoencoder and full training objectives}
+Let $X$ be a CT crop of $H\times W\times N_z$ voxels, $S_i$ its binary mask for
+sheet $i$, and $P_i=\{p_k\}_{k=1}^{K}$ its $K$ positive prompt coordinates.
+Here $H,W,N_z$ are the three spatial dimensions.
+The AE encoder $E$ maps a corrupted mask $\widetilde S_i$ to a code $z_i$;
+its occupancy decoder $D$ predicts probability $Q_i$:
+\begin{equation}
+ z_i=E(\widetilde S_i),\qquad Q_i=\sigmoid(D(z_i\odot(1+\xi))).
+ \label{eq:ae}
+\end{equation}
+Here $\sigmoid$ is the logistic function, $\odot$ is elementwise multiplication,
+and $\xi$ is independent uniform noise in $[-0.02,0.02]$ during AE training.
+At $320^3$ input, the code is $64\times10^3$. No encoder--decoder skip
+connections bypass it (Fig.~\ref{fig:ae}). The other heads predict a dense
+unsigned distance field $U_i$, a distance $h(z_i,q)$ at query coordinate $q$,
+and four intermediate occupancy maps $Q_i^{(a)}$.
+
+Define $\mathcal L_{\rm seg}$ as weighted BCE plus soft Dice loss. The AE uses
+\begin{align}
+ \mathcal L_{\rm AE}={}&\mathcal L_{\rm seg}(Q_i,S_i)
+   +\sum_a\alpha_a\mathcal L_{\rm seg}(Q_i^{(a)},S_i^{(a)})\nonumber\\
+ &+\lambda_U\mathcal H(U_i,d_i)
+  +\lambda_q\mathbb E_q\mathcal H(h(z_i,q),d_i(q))\nonumber\\
+ &+\lambda_r\mathbb E_{i\ne j}[\relu(\cos(z_i,z_j)-m)]\nonumber\\
+ &+\lambda_o R_o(Q_i,S_i)+\lambda_b R_b(Q_i,S_i).
+ \label{eq:aeloss}
+\end{align}
+The index $a$ denotes decoder stages; $S_i^{(a)}$ is the resized target.
+$\mathcal H$ is Smooth L1 loss, $d_i$ is unsigned distance to the sheet,
+clipped at 16 voxels and divided by 16, and $d_i(q)$ is its sampled value.
+The cosine term repels codes of distinct sheets in the same crop; $m=0.5$
+is its margin and $\relu(t)=\max(t,0)$. $R_o$ and $R_b$ penalize foreground
+outside a two-voxel GT tolerance and at the volume border. The $\alpha_a$ and
+$\lambda$ symbols are loss weights, specified below. The sheet prior uses no explicit topology loss.
+
+\subsection{Point-conditioned model and joint binary head}
+The CT encoder $C$ produces a $512\times10^3$ grid and four context attention
+blocks. Each prompt token combines Fourier coordinates, trilinearly sampled
+CT features and its positive label. Prefix attention and four transformer
+blocks $T$ predict the normalized sheet code (Fig.~\ref{fig:training}):
+\begin{align}
+ \bar z_i&=(E(S_i)-\mu)/\sigma,\qquad
+ \widehat{\bar z}_i=T(C(X),P_i),\nonumber\\
+ \widehat S_i&=\mathbf1[\sigmoid(D(\mu+\sigma\odot\widehat{\bar z}_i))\ge0.5].
+ \label{eq:p2sd}
+\end{align}
+$\mu$ and $\sigma$ are fixed channel means and safe standard deviations of AE
+codes; $\mathbf1$ is an indicator. The AE remains frozen. A separate binary
+head $B$, with convolutional skip connections, predicts sheet union probability
+$V=\sigmoid(B(C(X)))$ and supervises the shared CT features.
+
+For transformer round $r$, let $\widehat{\bar z}_i^{(r)}$ denote its code, and
+let $d(u,v)=\|u-v\|_2^2/L$ be MSE over $L$ code elements. Training minimizes
+\begin{align}
+ \mathcal L_{\rm train}={}&\sum_r\beta_r d(\widehat{\bar z}_i^{(r)},\bar z_i)
+ +0.5\mathcal L_{\rm same}+0.25\mathcal L_{\rm diff}\nonumber\\
+ &+\mathcal L_{\rm seg}^{\Omega}(V,Y),\label{eq:p2sdloss}\\
+ \mathcal L_{\rm same}&=\mathbb E_{i,P}d(\widehat{\bar z}_{i,P},c_i),\nonumber\\
+ \mathcal L_{\rm diff}&=\mathbb E_{i\ne j}[\relu(1-d(
+ \widehat{\bar z}_i,\widehat{\bar z}_j))].\nonumber
+\end{align}
+$c_i$ is the mean code of same-sheet prompt sets $P$ in a batch. Different-sheet
+pairs share a CT crop. $\beta=(0,0.5,1,1)$ weights the four rounds; $Y$ is the
+GT binary union and $\Omega$ its non-ignored voxels. The binary loss uses
+positive BCE weight 2 and soft Dice on $160^3$ crops. Point-to-sheet training
+uses no decoded occupancy loss in the main model.
+

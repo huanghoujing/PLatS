@@ -1,0 +1,1193 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -13,7 +13,7 @@
+ find_package(pybind11 REQUIRED)
+ find_package(Threads REQUIRED)
+ 
+-pybind11_add_module(betti_matching_count_only
++pybind11_add_module(betti_matching_binary_exact
+     src/_BettiMatching.cpp
+     src/BettiMatching.cpp
+     src/utils.cpp
+@@ -39,36 +39,7 @@
+     src/src_nD/enumerators.cpp
+ )
+ 
+-# add_library(betti_matching MODULE src/BettiMatching.cpp)
+-# target_link_libraries(betti_matching PRIVATE pybind11::module)
+-
+-add_executable(BettiMatching
+-    src/main.cpp
+-    src/BettiMatching.cpp
+-    src/utils.cpp
+-    src/data_structures.cpp
+-    src/src_1D/BettiMatching.cpp
+-    src/src_1D/dimension_0.cpp
+-    src/src_1D/data_structures.cpp
+-    src/src_2D/BettiMatching.cpp
+-    src/src_2D/dimension_0.cpp
+-    src/src_2D/dimension_1.cpp
+-    src/src_2D/data_structures.cpp
+-    src/src_3D/BettiMatching.cpp
+-    src/src_3D/dimension_0.cpp
+-    src/src_3D/dimension_1.cpp
+-    src/src_3D/dimension_2.cpp
+-    src/src_3D/data_structures.cpp
+-    src/src_3D/enumerators.cpp
+-    src/src_nD/BettiMatching.cpp
+-    src/src_nD/dimension_0.cpp
+-    src/src_nD/inter_dimensions.cpp
+-    src/src_nD/top_dimension.cpp
+-    src/src_nD/data_structures.cpp
+-    src/src_nD/enumerators.cpp
+-)
+-
+-set_target_properties(BettiMatching betti_matching_count_only
++set_target_properties(betti_matching_binary_exact
+ PROPERTIES
+ CXX_STANDARD 17
+ CXX_EXTENSIONS OFF
+@@ -78,4 +49,4 @@
+ set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+ set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+ 
+-target_link_libraries(BettiMatching Threads::Threads)
++target_link_libraries(betti_matching_binary_exact PRIVATE Threads::Threads)
+--- a/src/BettiMatching.cpp
++++ b/src/BettiMatching.cpp
+@@ -129,6 +129,25 @@
+ #endif
+ }
+ 
++vector<array<size_t, 3>> BettiMatching::computeMatchingCounts() {
++    if (dimension != 3) {
++        computeMatching();
++        return getMatchingCounts();
++    }
++    if (computed || computedPairsInput0) {
++        throw runtime_error("computeMatchingCounts can only be called once");
++    }
++
++    // The 3D public API materializes parent-voxel coordinates after matching.
++    // The leaderboard aggregation only needs these three cardinalities.
++    dim3::BettiMatching &bettiMatching = std::get<dim3::BettiMatching>(
++        dimensionSpecificBettiMatching.value());
++    bettiMatching.computeMatching();
++    countOnlyMatchingCounts.emplace(bettiMatching.getMatchingCounts());
++    computed = true;
++    return countOnlyMatchingCounts.value();
++}
++
+ vector<vector<VoxelPair>> BettiMatching::computePairsInput0() {
+     if (computed || computedPairsInput0) {
+         throw runtime_error("computePairsInput0 can only be called once and if "
+@@ -248,6 +267,9 @@
+     if (!computed) {
+         throw std::runtime_error("Betti Matching not computed yet");
+     }
++    if (countOnlyMatchingCounts.has_value()) {
++        return countOnlyMatchingCounts.value();
++    }
+     const auto collectCounts = [](const auto &matched, const auto &unmatched0,
+                                   const auto &unmatched1) {
+         vector<array<size_t, 3>> counts;
+--- a/src/BettiMatching.h
++++ b/src/BettiMatching.h
+@@ -24,6 +24,7 @@
+     tuple<vector<vector<VoxelMatch>>, vector<vector<VoxelPair>>,
+           vector<vector<VoxelPair>>>
+     getMatching();
++    vector<array<size_t, 3>> computeMatchingCounts();
+     vector<array<size_t, 3>> getMatchingCounts();
+     variant<tuple<vector<dim1::RepresentativeCycle>,
+                   vector<dim1::RepresentativeCycle>>,
+@@ -42,6 +43,7 @@
+                      dim3::BettiMatching, dimN::BettiMatching>>
+         dimensionSpecificBettiMatching;
+     size_t dimension;
++    optional<vector<array<size_t, 3>>> countOnlyMatchingCounts;
+     bool computed;
+     bool computedPairsInput0;
+ };
+--- a/src/_BettiMatching.cpp
++++ b/src/_BettiMatching.cpp
+@@ -124,7 +124,8 @@
+ 
+ vector<array<size_t, 3>>
+ computeMatchingCountsFromNumpyArrays(TypedInputVolume &input1,
+-                                     TypedInputVolume &input2) {
++                                     TypedInputVolume &input2,
++                                     Config config) {
+     vector<index_t> shape1(input1.shape(), input1.shape() + input1.ndim());
+     vector<index_t> shape2(input2.shape(), input2.shape() + input2.ndim());
+     if (shape1 != shape2) {
+@@ -137,12 +138,39 @@
+     vector<value_t> input2Vector(input2.mutable_data(),
+                                  input2.mutable_data() + input2.size());
+ 
+-    Config config;
+     BettiMatching bettiMatching(std::move(input1Vector),
+                                 std::move(input2Vector), std::move(shape1),
+                                 std::move(config));
+-    bettiMatching.computeMatching();
+-    return bettiMatching.getMatchingCounts();
++    return bettiMatching.computeMatchingCounts();
++}
++
++TypedInputVolume validateBinaryInput(InputVolume &input) {
++    if (input.ndim() != 3) {
++        throw invalid_argument("betti_matching_binary_exact requires 3D inputs");
++    }
++    if (!input.dtype().is(py::dtype::of<value_t>())) {
++        throw invalid_argument(
++            "betti_matching_binary_exact requires C-contiguous uint8 inputs");
++    }
++    if ((input.flags() & py::array::c_style) != py::array::c_style) {
++        throw invalid_argument(
++            "betti_matching_binary_exact requires C-contiguous uint8 inputs");
++    }
++    const auto *values = static_cast<const value_t *>(input.data());
++    for (py::ssize_t index = 0; index < input.size(); ++index) {
++        if (values[index] > 1) {
++            throw invalid_argument(
++                "betti_matching_binary_exact requires binary uint8 values {0, 1}");
++        }
++    }
++    auto typed = input.cast<TypedInputVolume>();
++    for (py::ssize_t dimension = 0; dimension < typed.ndim(); ++dimension) {
++        if (typed.shape(dimension) >= dim3::Cube::kCoordinateLimit) {
++            throw invalid_argument(
++                "betti_matching_binary_exact supports dimensions up to 1023 voxels");
++        }
++    }
++    return typed;
+ }
+ 
+ vector<vector<VoxelPair>>
+@@ -223,7 +251,8 @@
+ }
+ 
+ vector<py::array_t<int64_t>> computeMatchingCountsFromInputs(
+-    vector<InputVolume> &untypedInputs1, vector<InputVolume> &untypedInputs2) {
++    vector<InputVolume> &untypedInputs1, vector<InputVolume> &untypedInputs2,
++    size_t cacheSize, size_t minRecursionToCache) {
+     vector<TypedInputVolume> inputs1;
+     vector<TypedInputVolume> inputs2;
+     if (untypedInputs1.size() != untypedInputs2.size()) {
+@@ -233,22 +262,26 @@
+             std::to_string(untypedInputs2.size()) + " (inputs2)");
+     }
+     for (size_t i = 0; i < untypedInputs1.size(); i++) {
+-        vector<index_t> shape1(untypedInputs1[i].shape(),
+-                               untypedInputs1[i].shape() + untypedInputs1[i].ndim());
+-        vector<index_t> shape2(untypedInputs2[i].shape(),
+-                               untypedInputs2[i].shape() + untypedInputs2[i].ndim());
++        auto input1 = validateBinaryInput(untypedInputs1[i]);
++        auto input2 = validateBinaryInput(untypedInputs2[i]);
++        vector<index_t> shape1(input1.shape(), input1.shape() + input1.ndim());
++        vector<index_t> shape2(input2.shape(), input2.shape() + input2.ndim());
+         if (shape1 != shape2) {
+             throw invalid_argument(
+                 "The shapes of the input volumes must agree. Got " +
+                 repr_vector(shape1) + " and " + repr_vector(shape2));
+         }
+-        inputs1.push_back(untypedInputs1[i].cast<TypedInputVolume>());
+-        inputs2.push_back(untypedInputs2[i].cast<TypedInputVolume>());
++        inputs1.push_back(std::move(input1));
++        inputs2.push_back(std::move(input2));
+     }
++    Config config;
++    config.cacheSize = cacheSize;
++    config.minRecursionToCache = minRecursionToCache;
+     std::vector<std::future<vector<array<size_t, 3>>>> resultFutures;
+     for (size_t i = 0; i < inputs1.size(); i++) {
+         resultFutures.push_back(std::async(computeMatchingCountsFromNumpyArrays,
+-                                           std::ref(inputs1[i]), std::ref(inputs2[i])));
++                                           std::ref(inputs1[i]), std::ref(inputs2[i]),
++                                           config));
+     }
+     vector<vector<array<size_t, 3>>> countResults;
+     countResults.reserve(resultFutures.size());
+@@ -501,20 +534,25 @@
+     return coordinateArray;
+ }
+ 
+-PYBIND11_MODULE(betti_matching_count_only, m) {
++PYBIND11_MODULE(betti_matching_binary_exact, m) {
+     m.def(
+         "compute_matching_counts",
+-        [](InputVolume &untypedInput1, InputVolume &untypedInput2) {
++        [](InputVolume &untypedInput1, InputVolume &untypedInput2,
++           size_t cacheSize, size_t minRecursionToCache) {
+             vector<InputVolume> untypedInputs1 = {untypedInput1};
+             vector<InputVolume> untypedInputs2 = {untypedInput2};
+             return std::move(computeMatchingCountsFromInputs(
+-                untypedInputs1, untypedInputs2)[0]);
++                untypedInputs1, untypedInputs2, cacheSize, minRecursionToCache)[0]);
+         },
+         py::arg("input1").noconvert(), py::arg("input2").noconvert(),
+-        "Compute exact matched, input1-unmatched, and input2-unmatched counts.");
++        py::arg("cache_size") = numeric_limits<size_t>::max(),
++        py::arg("min_recursion_to_cache") = 1,
++        "Compute exact binary 3D matched and unmatched counts.");
+     m.def("compute_matching_counts", &computeMatchingCountsFromInputs,
+           py::arg("inputs1").noconvert(), py::arg("inputs2").noconvert(),
+-          "Compute exact count-only matchings for a batch of volume pairs.");
++          py::arg("cache_size") = numeric_limits<size_t>::max(),
++          py::arg("min_recursion_to_cache") = 1,
++          "Compute exact binary 3D count-only matchings for a batch of volume pairs.");
+     return;
+ 
+     m.def(
+@@ -795,17 +833,9 @@
+             Returns
+             -------
+             result : BettiMatchingResult
+-            The result of the Betti matching between the two input volumes.
+-            See the documentation of `betti_matching.return_types.BettiMatchingResult`
+-            for details about the contained data.
+-            )")
+-
+-        .def("get_matching_counts", [](BettiMatching &self) {
+-            return matchingCountsToArray(self.getMatchingCounts());
+-        }, R"(
+-            get_matching_counts()
+-
+-            Retrieve exact matched, input1-unmatched, and input2-unmatched counts.
++                The result of the Betti matching between the two input volumes.
++                See the documentation of `betti_matching.return_types.BettiMatchingResult`
++                for details about the contained data.
+             )")
+ 
+         .def("print", &BettiMatching::printResult,
+--- a/src/config.h
++++ b/src/config.h
+@@ -23,11 +23,14 @@
+                                               // dim3::Dimension1
+ 
+ typedef uint32_t index_t;
+-typedef double value_t;
++typedef uint8_t value_t;
+ 
+-#define INFTY numeric_limits<value_t>::infinity()
++// This module accepts only binary uint8 inputs. Two represents the padded
++// filtration value that is greater than both valid values, zero and one.
++#define INFTY static_cast<value_t>(2)
+ #define NONE numeric_limits<index_t>::max()
+-#define NONE_INDEX numeric_limits<uint64_t>::max()
++// dim3::Cube packs a 62-bit identity with a two-bit birth value.
++#define NONE_INDEX ((uint64_t{1} << 62) - 1)
+ 
+ enum fileFormat { DIPHA, PERSEUS, NUMPY };
+ 
+--- a/src/src_3D/BettiMatching.cpp
++++ b/src/src_3D/BettiMatching.cpp
+@@ -109,6 +109,29 @@
+     }
+ }
+ 
++vector<array<size_t, 3>> BettiMatching::getMatchingCounts() const {
++    const auto countUnmatched = [](const vector<Pair> &pairs,
++                                   const unordered_map<uint64_t, bool> &isMatched) {
++        size_t count = 0;
++        for (const auto &pair : pairs) {
++            const auto match = isMatched.find(pair.birth.identity());
++            if (match == isMatched.end() || !match->second) {
++                ++count;
++            }
++        }
++        return count;
++    };
++
++    vector<array<size_t, 3>> counts;
++    counts.reserve(3);
++    for (uint8_t dimension = 0; dimension < 3; ++dimension) {
++        counts.push_back({matches[dimension].size(),
++                          countUnmatched(pairs0[dimension], isMatched0[dimension]),
++                          countUnmatched(pairs1[dimension], isMatched1[dimension])});
++    }
++    return counts;
++}
++
+ void BettiMatching::computeVoxels() {
+ #ifdef RUNTIME
+     cout << "computing voxels ... ";
+@@ -117,14 +140,14 @@
+ 
+     for (uint8_t d = 0; d < 3; ++d) {
+         for (auto &pair : pairs0[d]) {
+-            if (!isMatched0[d][pair.birth.index]) {
++            if (!isMatched0[d][pair.birth.identity()]) {
+                 _unmatched0[d].push_back(
+                     VoxelPair(cgc0.getParentVoxel(pair.birth, d),
+                               cgc0.getParentVoxel(pair.death, d + 1)));
+             }
+         }
+         for (auto &pair : pairs1[d]) {
+-            if (!isMatched1[d][pair.birth.index]) {
++            if (!isMatched1[d][pair.birth.identity()]) {
+                 _unmatched1[d].push_back(
+                     VoxelPair(cgc1.getParentVoxel(pair.birth, d),
+                               cgc1.getParentVoxel(pair.death, d + 1)));
+@@ -286,7 +309,7 @@
+         cout << "dim " << unsigned(d) << ": ";
+         count = 0;
+         for (auto &pair : pairs0[d]) {
+-            if (!isMatched0[d][pair.birth.index]) {
++            if (!isMatched0[d][pair.birth.identity()]) {
+                 ++count;
+             }
+         }
+@@ -298,7 +321,7 @@
+                 std::get<1>(computeRepresentativeCycles(0, d, {std::vector<size_t>()}, range));
+             counter = 0;
+             for (size_t i = 0; i < pairs0[d].size(); ++i) {
+-                if (!isMatched0[d][pairs0[d][i].birth.index]) {
++                if (!isMatched0[d][pairs0[d][i].birth.identity()]) {
+                     pairs0[d][i].print();
+                     cout << endl;
+                     _unmatched0[d][counter].print();
+@@ -321,7 +344,7 @@
+         cout << "dim " << unsigned(d) << ": ";
+         count = 0;
+         for (auto &pair : pairs1[d]) {
+-            if (!isMatched1[d][pair.birth.index]) {
++            if (!isMatched1[d][pair.birth.identity()]) {
+                 ++count;
+             }
+         }
+@@ -334,7 +357,7 @@
+                     1, d, {std::vector<size_t>()}, range));
+             counter = 0;
+             for (size_t i = 0; i < pairs1[d].size(); ++i) {
+-                if (!isMatched1[d][pairs1[d][i].birth.index]) {
++                if (!isMatched1[d][pairs1[d][i].birth.identity()]) {
+                     pairs1[d][i].print();
+                     cout << endl;
+                     _unmatched1[d][counter].print();
+@@ -358,75 +381,11 @@
+     const int input, const int dim,
+     const optional<vector<size_t>> &matchedPairsIndices,
+     const optional<vector<size_t>> &unmatchedPairsIndices) {
+-    if (dim < 0 || dim > 2) {
+-        throw runtime_error("Invalid value for dim");
+-    }
+-
+-    // Assemble the list of requested pairs: First the matched pairs (all if
+-    // empty optional was passed, then the unmatched pairs (all if empty
+-    // optional was passed)
+-    vector<std::reference_wrapper<Pair>> requestedPairs;
+-    if (input == 0 || input == 1) {
+-        requestedPairs = assembleRequestedPairs(
+-            matchedPairsIndices, unmatchedPairsIndices,
+-            (input == 0 ? pairs0 : pairs1)[dim],
+-            (input == 0 ? isMatched0 : isMatched1)[dim], matches[dim], input);
+-    } else if (input == 2) {
+-        requestedPairs = assembleRequestedComparisonPairs<Pair>(
+-            matchedPairsIndices, pairsComp[dim], isMatchedWithIndexComp[dim]);
+-    } else {
+-        throw runtime_error("Invalid value for input");
+-    }
+-
+-    // Hand over the representative cycle computation to the respective
+-    // dimension
+-    vector<RepresentativeCycle> representativeCycles;
+-    switch (dim) {
+-    case 0: {
+-        Dimension0 dim0(cgc0, cgc1, cgcComp, config, pairs0[0], pairs1[0],
+-                        pairsComp[0], matches[0], isMatched0[0], isMatched1[0],
+-                        isMatchedWithIndexComp[0]);
+-        representativeCycles =
+-            dim0.computeRepresentativeCycles(input, requestedPairs);
+-        break;
+-    }
+-    case 1: {
+-        Dimension1 dim1(cgc0, cgc1, cgcComp, config, pairs0[1], pairs1[1],
+-                        pairsComp[1], matches[1], isMatched0[1], isMatched1[1],
+-                        isMatchedWithIndexComp[1], dim1CacheInputPairs0,
+-                        dim1CacheInputPairs1, dim1CacheCompPairs);
+-        representativeCycles =
+-            dim1.computeRepresentativeCycles(input, requestedPairs);
+-        break;
+-    }
+-    case 2: {
+-        Dimension2 dim2(cgc0, cgc1, cgcComp, config, pairs0[2], pairs1[2],
+-                        pairsComp[2], matches[2], isMatched0[2], isMatched1[2],
+-                        isMatchedWithIndexComp[2]);
+-        representativeCycles =
+-            dim2.computeRepresentativeCycles(input, requestedPairs);
+-        break;
+-    }
+-    }
+-
+-    // Split the returned representative cycles into a matched and unmatched
+-    // portion
+-    vector<RepresentativeCycle> matchedRepresentativeCycles;
+-    vector<RepresentativeCycle> unmatchedRepresentativeCycles;
+-
+-    int numMatchedRequested = matchedPairsIndices.has_value()
+-                                  ? matchedPairsIndices->size()
+-                                  : matches[dim].size();
+-    matchedRepresentativeCycles.insert(
+-        matchedRepresentativeCycles.end(),
+-        std::make_move_iterator(representativeCycles.begin()),
+-        std::make_move_iterator(representativeCycles.begin()) +
+-            numMatchedRequested);
+-    unmatchedRepresentativeCycles.insert(
+-        unmatchedRepresentativeCycles.end(),
+-        std::make_move_iterator(representativeCycles.begin() +
+-                                numMatchedRequested),
+-        std::make_move_iterator(representativeCycles.end()));
+-
+-    return {matchedRepresentativeCycles, unmatchedRepresentativeCycles};
++    (void)input;
++    (void)dim;
++    (void)matchedPairsIndices;
++    (void)unmatchedPairsIndices;
++    throw runtime_error(
++        "The binary exact backend exposes count-only topology; "
++        "representative cycles are intentionally unavailable.");
+ }
+--- a/src/src_3D/BettiMatching.h
++++ b/src/src_3D/BettiMatching.h
+@@ -2,6 +2,7 @@
+ 
+ #include "../data_structures.h"
+ #include "data_structures.h"
++#include <array>
+ #include <unordered_map>
+ 
+ namespace dim3 {
+@@ -13,6 +14,7 @@
+     BettiMatching(BettiMatching &&other);
+     void computeMatching();
+     void computeVoxels();
++    vector<array<size_t, 3>> getMatchingCounts() const;
+     vector<vector<VoxelPair>> computePairsInput0();
+     void printResult();
+     tuple<vector<dim3::RepresentativeCycle>, vector<dim3::RepresentativeCycle>>
+--- a/src/src_3D/data_structures.cpp
++++ b/src/src_3D/data_structures.cpp
+@@ -7,43 +7,57 @@
+ using namespace dim3;
+ using namespace std;
+ 
+-Cube::Cube() : birth(0), index(NONE_INDEX) {}
++Cube::Cube() : packed(NONE_INDEX) {}
+ 
+ Cube::Cube(value_t _birth, index_t _x, index_t _y, index_t _z, uint8_t _type)
+-    : birth(_birth) {
+-    index = ((uint64_t)_x << 44) | ((uint64_t)_y << 24) | ((uint64_t)_z << 4) |
+-            (uint64_t)_type;
++    : packed(((uint64_t)_x << kXShift) | ((uint64_t)_y << kYShift) |
++             ((uint64_t)_z << kZShift) | (uint64_t)_type |
++             ((uint64_t)_birth << kBirthShift)) {
+ }
+ 
+ Cube::Cube(value_t _birth, vector<index_t> coordinates, uint8_t _type)
+-    : birth(_birth) {
+-    index = ((uint64_t)coordinates[0] << 44) |
+-            ((uint64_t)coordinates[1] << 24) | ((uint64_t)coordinates[2] << 4) |
+-            (uint64_t)_type;
++    : packed(((uint64_t)coordinates[0] << kXShift) |
++             ((uint64_t)coordinates[1] << kYShift) |
++             ((uint64_t)coordinates[2] << kZShift) | (uint64_t)_type |
++             ((uint64_t)_birth << kBirthShift)) {
+ }
+ 
+-Cube::Cube(const Cube &cube) : birth(cube.birth), index(cube.index) {}
++Cube::Cube(const Cube &cube) : packed(cube.packed) {}
+ 
+-bool Cube::operator==(const Cube &rhs) const { return (index == rhs.index); }
++bool Cube::operator==(const Cube &rhs) const {
++    return identity() == rhs.identity();
++}
++
++index_t Cube::x() const {
++    return ((identity() >> kXShift) & kCoordinateMask);
++}
++
++index_t Cube::y() const {
++    return ((identity() >> kYShift) & kCoordinateMask);
++}
++
++index_t Cube::z() const {
++    return ((identity() >> kZShift) & kCoordinateMask);
++}
+ 
+-index_t Cube::x() const { return ((index >> 44) & 0xfffff); }
++uint8_t Cube::type() const { return (identity() & 0x3); }
+ 
+-index_t Cube::y() const { return ((index >> 24) & 0xfffff); }
++uint64_t Cube::identity() const { return packed & kIdentityMask; }
+ 
+-index_t Cube::z() const { return ((index >> 4) & 0xfffff); }
++value_t Cube::filtration() const { return packed >> kBirthShift; }
+ 
+-uint8_t Cube::type() const { return (index & 0xf); }
++void Cube::clearIdentity() { packed = (packed & ~kIdentityMask) | NONE_INDEX; }
+ 
+ void Cube::print() const {
+-    cout << "(" << birth << "," << x() << "," << y() << "," << z() << ","
++    cout << "(" << unsigned(filtration()) << "," << x() << "," << y() << "," << z() << ","
+          << unsigned(type()) << ")";
+ }
+ 
+ bool CubeComparator::operator()(const Cube &cube1, const Cube &cube2) const {
+-    if (cube1.birth == cube2.birth) {
+-        return (cube1.index < cube2.index);
++    if (cube1.filtration() == cube2.filtration()) {
++        return cube1.identity() < cube2.identity();
+     } else {
+-        return (cube1.birth < cube2.birth);
++        return cube1.filtration() < cube2.filtration();
+     }
+ }
+ 
+@@ -181,21 +195,21 @@
+     case 1:
+         switch (cube.type()) {
+         case 0:
+-            if (cube.birth == getBirth(x + 1, y, z)) {
++            if (cube.filtration() == getBirth(x + 1, y, z)) {
+                 return {x + 1, y, z};
+             } else {
+                 return {x, y, z};
+             }
+ 
+         case 1:
+-            if (cube.birth == getBirth(x, y + 1, z)) {
++            if (cube.filtration() == getBirth(x, y + 1, z)) {
+                 return {x, y + 1, z};
+             } else {
+                 return {x, y, z};
+             }
+ 
+         case 2:
+-            if (cube.birth == getBirth(x, y, z + 1)) {
++            if (cube.filtration() == getBirth(x, y, z + 1)) {
+                 return {x, y, z + 1};
+             } else {
+                 return {x, y, z};
+@@ -205,33 +219,33 @@
+     case 2:
+         switch (cube.type()) {
+         case 0:
+-            if (cube.birth == getBirth(x, y + 1, z + 1)) {
++            if (cube.filtration() == getBirth(x, y + 1, z + 1)) {
+                 return {x, y + 1, z + 1};
+-            } else if (cube.birth == getBirth(x, y + 1, z)) {
++            } else if (cube.filtration() == getBirth(x, y + 1, z)) {
+                 return {x, y + 1, z};
+-            } else if (cube.birth == getBirth(x, y, z + 1)) {
++            } else if (cube.filtration() == getBirth(x, y, z + 1)) {
+                 return {x, y, z + 1};
+             } else {
+                 return {x, y, z};
+             }
+ 
+         case 1:
+-            if (cube.birth == getBirth(x + 1, y, z + 1)) {
++            if (cube.filtration() == getBirth(x + 1, y, z + 1)) {
+                 return {x + 1, y, z + 1};
+-            } else if (cube.birth == getBirth(x + 1, y, z)) {
++            } else if (cube.filtration() == getBirth(x + 1, y, z)) {
+                 return {x + 1, y, z};
+-            } else if (cube.birth == getBirth(x, y, z + 1)) {
++            } else if (cube.filtration() == getBirth(x, y, z + 1)) {
+                 return {x, y, z + 1};
+             } else {
+                 return {x, y, z};
+             }
+ 
+         case 2:
+-            if (cube.birth == getBirth(x + 1, y + 1, z)) {
++            if (cube.filtration() == getBirth(x + 1, y + 1, z)) {
+                 return {x + 1, y + 1, z};
+-            } else if (cube.birth == getBirth(x + 1, y, z)) {
++            } else if (cube.filtration() == getBirth(x + 1, y, z)) {
+                 return {x + 1, y, z};
+-            } else if (cube.birth == getBirth(x, y + 1, z)) {
++            } else if (cube.filtration() == getBirth(x, y + 1, z)) {
+                 return {x, y + 1, z};
+             } else {
+                 return {x, y, z};
+@@ -239,19 +253,19 @@
+         }
+ 
+     case 3:
+-        if (cube.birth == getBirth(x, y, z)) {
++        if (cube.filtration() == getBirth(x, y, z)) {
+             return {x, y, z};
+-        } else if (cube.birth == getBirth(x, y, z + 1)) {
++        } else if (cube.filtration() == getBirth(x, y, z + 1)) {
+             return {x, y, z + 1};
+-        } else if (cube.birth == getBirth(x, y + 1, z)) {
++        } else if (cube.filtration() == getBirth(x, y + 1, z)) {
+             return {x, y + 1, z};
+-        } else if (cube.birth == getBirth(x, y + 1, z + 1)) {
++        } else if (cube.filtration() == getBirth(x, y + 1, z + 1)) {
+             return {x, y + 1, z + 1};
+-        } else if (cube.birth == getBirth(x + 1, y, z)) {
++        } else if (cube.filtration() == getBirth(x + 1, y, z)) {
+             return {x + 1, y, z};
+-        } else if (cube.birth == getBirth(x + 1, y, z + 1)) {
++        } else if (cube.filtration() == getBirth(x + 1, y, z + 1)) {
+             return {x + 1, y, z + 1};
+-        } else if (cube.birth == getBirth(x + 1, y + 1, z)) {
++        } else if (cube.filtration() == getBirth(x + 1, y + 1, z)) {
+             return {x + 1, y + 1, z};
+         } else {
+             return {x + 1, y + 1, z + 1};
+--- a/src/src_3D/data_structures.h
++++ b/src/src_3D/data_structures.h
+@@ -20,6 +20,14 @@
+ 
+ class Cube {
+   public:
++    static constexpr index_t kCoordinateLimit = 1024;
++    static constexpr uint64_t kCoordinateMask = kCoordinateLimit - 1;
++    static constexpr uint64_t kZShift = 2;
++    static constexpr uint64_t kYShift = kZShift + 10;
++    static constexpr uint64_t kXShift = kYShift + 10;
++    static constexpr uint64_t kBirthShift = 62;
++    static constexpr uint64_t kIdentityMask = (uint64_t{1} << kBirthShift) - 1;
++
+     Cube();
+     Cube(value_t birth, index_t x, index_t y, index_t z, uint8_t type);
+     Cube(value_t birth, vector<index_t> coordinates, uint8_t type);
+@@ -29,11 +37,18 @@
+     index_t y() const;
+     index_t z() const;
+     uint8_t type() const;
++    uint64_t identity() const;
++    value_t filtration() const;
++    void clearIdentity();
+     void print() const;
+-    value_t birth;
+-    uint64_t index;
++
++  private:
++    uint64_t packed;
+ };
+ 
++static_assert(sizeof(Cube) == sizeof(uint64_t),
++              "Binary Cube must pack identity and birth into one word");
++
+ struct CubeComparator {
+     bool operator()(const Cube &Cube1, const Cube &Cube2) const;
+ };
+@@ -49,6 +64,9 @@
+     Cube death;
+ };
+ 
++static_assert(sizeof(Pair) == 2 * sizeof(Cube),
++              "Binary Pair must contain two packed cubes");
++
+ class Match {
+   public:
+     Match(Pair pair0, Pair pair1);
+@@ -57,6 +75,9 @@
+     Pair pair1;
+ };
+ 
++static_assert(sizeof(Match) == 2 * sizeof(Pair),
++              "Binary Match must contain two compact pairs");
++
+ class CubicalGridComplex {
+   public:
+     CubicalGridComplex(const vector<value_t> &image,
+@@ -176,10 +197,10 @@
+ 
+ template <int _dim, class _Tp>
+ uint64_t CubeMap<_dim, _Tp>::computeCoordinateIndex(uint64_t cube_index) const {
+-    int x = (cube_index >> 44) & 0xfffff;
+-    int y = (cube_index >> 24) & 0xfffff;
+-    int z = (cube_index >> 4) & 0xfffff;
+-    int type = (_dim == 1 || _dim == 2) ? (cube_index & 0xf) : 0;
++    int x = (cube_index >> Cube::kXShift) & Cube::kCoordinateMask;
++    int y = (cube_index >> Cube::kYShift) & Cube::kCoordinateMask;
++    int z = (cube_index >> Cube::kZShift) & Cube::kCoordinateMask;
++    int type = (_dim == 1 || _dim == 2) ? (cube_index & 0x3) : 0;
+ 
+     return x * stride_x_direction + y * stride_y_direction +
+            z * stride_z_direction + type;
+--- a/src/src_3D/dimension_0.cpp
++++ b/src/src_3D/dimension_0.cpp
+@@ -90,7 +90,7 @@
+         if (parentIdx0 != parentIdx1) {
+             birthIdx = uf.link(parentIdx0, parentIdx1);
+             birth = uf.getBirth(birthIdx);
+-            if (birth != edge.birth) {
++            if (birth != edge.filtration()) {
+                 birthCoordinates = uf.getCoordinates(birthIdx);
+                 pairs.push_back(Pair(Cube(birth, std::get<0>(birthCoordinates),
+                                           std::get<1>(birthCoordinates),
+@@ -138,7 +138,7 @@
+             parentIdx0 = uf1.find(boundaryIndices[0]);
+             parentIdx1 = uf1.find(boundaryIndices[1]);
+             birthIdx1 = uf1.link(parentIdx0, parentIdx1);
+-            if (birth != edge.birth) {
++            if (birth != edge.filtration()) {
+                 birthCoordinates = ufComp.getCoordinates(birthIdxComp);
+ #ifdef COMPUTE_COMPARISON
+                 pairsComp.push_back(
+@@ -151,10 +151,10 @@
+                 auto find1 = matchMap1.find(birthIdx1);
+                 if (find0 != matchMap0.end() && find1 != matchMap1.end()) {
+                     matches.push_back(Match(find0->second, find1->second));
+-                    isMatched0.emplace(find0->second.birth.index, true);
+-                    isMatched1.emplace(find1->second.birth.index, true);
++                    isMatched0.emplace(find0->second.birth.identity(), true);
++                    isMatched1.emplace(find1->second.birth.identity(), true);
+ #ifdef COMPUTE_COMPARISON
+-                    isMatchedWithIndexComp.emplace(pairsComp.back().birth.index,
++                    isMatchedWithIndexComp.emplace(pairsComp.back().birth.identity(),
+                                                    matches.size() - 1);
+ #endif
+                 }
+@@ -205,11 +205,11 @@
+ #ifdef USE_STABLE_SORT_OR_STABLE_PARTITION
+     if (binaryInputs) {
+         std::stable_partition(edges.begin(), edges.end(),
+-                              [](Cube &cube) { return cube.birth == 0; });
++                              [](Cube &cube) { return cube.filtration() == 0; });
+     } else {
+         std::stable_sort(edges.begin(), edges.end(),
+                          [](const Cube &cube1, const Cube &cube2) {
+-                             return cube1.birth < cube2.birth;
++                             return cube1.filtration() < cube2.filtration();
+                          });
+     }
+ #else
+@@ -244,7 +244,7 @@
+     // found, hence we need a set)
+     CubeMap<1, std::reference_wrapper<Pair>> requestedPairsByDeath(cgc.shape);
+     for (auto &pair : requestedPairs) {
+-        requestedPairsByDeath.emplace(pair.get().death.index, pair);
++        requestedPairsByDeath.emplace(pair.get().death.identity(), pair);
+     }
+ 
+     // Initialize singleton representative cycles
+@@ -273,9 +273,9 @@
+                 cycleByBirthIdx[olderBirthIdx].end(),
+                 cycleByBirthIdx[youngerBirthIdx].begin(),
+                 cycleByBirthIdx[youngerBirthIdx].end());
+-            unionFindIdxByDeath[edge.index] = youngerBirthIdx;
++            unionFindIdxByDeath[edge.identity()] = youngerBirthIdx;
+ 
+-            auto maybeRequestedPair = requestedPairsByDeath.find(edge.index);
++            auto maybeRequestedPair = requestedPairsByDeath.find(edge.identity());
+             // If the deceased component does not correspond to a pair we'd like
+             // to save, delete it to save memory:
+             if (!maybeRequestedPair.has_value()) {
+@@ -300,7 +300,7 @@
+     vector<RepresentativeCycle> representativeCycles;
+     representativeCycles.reserve(requestedPairs.size());
+     for (auto &pair : requestedPairs) {
+-        auto unionFindIdx = unionFindIdxByDeath.find(pair.get().death.index);
++        auto unionFindIdx = unionFindIdxByDeath.find(pair.get().death.identity());
+         if (!unionFindIdx.has_value()) {
+             throw runtime_error("Union find index for pair cannot be found");
+         }
+--- a/src/src_3D/dimension_1.cpp
++++ b/src/src_3D/dimension_1.cpp
+@@ -196,8 +196,8 @@
+     uint64_t birthIndex0;
+     uint64_t birthIndex1;
+     for (Pair &pair : pairsComp) {
+-        auto find0 = matchMapIm0.find(pair.death.index);
+-        auto find1 = matchMapIm1.find(pair.death.index);
++        auto find0 = matchMapIm0.find(pair.death.identity());
++        auto find1 = matchMapIm1.find(pair.death.identity());
+         if (find0.has_value() && find1.has_value()) {
+             birthIndex0 = *find0;
+             birthIndex1 = *find1;
+@@ -205,10 +205,10 @@
+             auto find1 = matchMap1.find(birthIndex1);
+             if (find0.has_value() && find1.has_value()) {
+                 matches.push_back(Match(*find0, *find1));
+-                isMatched0.emplace(find0->birth.index, true);
+-                isMatched1.emplace(find1->birth.index, true);
++                isMatched0.emplace(find0->birth.identity(), true);
++                isMatched1.emplace(find1->birth.identity(), true);
+ #ifdef COMPUTE_COMPARISON
+-                isMatchedWithIndexComp.emplace(pair.birth.index,
++                isMatchedWithIndexComp.emplace(pair.birth.identity(),
+                                                matches.size() - 1);
+ #endif
+             }
+@@ -247,7 +247,7 @@
+                     if (birth < config.threshold) {
+ #ifdef USE_CLEARING_DIM0
+                         cube = Cube(birth, x, y, z, type);
+-                        auto find = pivotColumnIndex.find(cube.index);
++                        auto find = pivotColumnIndex.find(cube.identity());
+                         if (!find.has_value()) {
+                             edges.push_back(cube);
+ #ifdef USE_STABLE_SORT_OR_STABLE_PARTITION
+@@ -270,11 +270,11 @@
+ #ifdef USE_STABLE_SORT_OR_STABLE_PARTITION
+     if (binaryInputs) {
+         std::stable_partition(edges.begin(), edges.end(),
+-                              [](Cube &cube) { return cube.birth == 0; });
++                              [](Cube &cube) { return cube.filtration() == 0; });
+     } else {
+         std::stable_sort(edges.begin(), edges.end(),
+                          [](const Cube &cube1, const Cube &cube2) {
+-                             return cube1.birth < cube2.birth;
++                             return cube1.filtration() < cube2.filtration();
+                          });
+     }
+ #else
+@@ -328,7 +328,7 @@
+ 
+ Cube Dimension1::getPivot(CubeQueue &column) const {
+     Cube result = popPivot(column);
+-    if (result.index != NONE_INDEX) {
++    if (result.identity() != NONE_INDEX) {
+         column.push(result);
+     }
+     return result;
+@@ -343,7 +343,7 @@
+                                     CubeMap<2, vector<Cube>> &cache
+ #endif
+ ) const {
+-    auto reductionColumn = reductionMatrix.find(column.index);
++    auto reductionColumn = reductionMatrix.find(column.identity());
+     if (reductionColumn.has_value()) {
+         for (Cube &row : *reductionColumn) {
+ #ifdef USE_CACHE
+@@ -370,7 +370,7 @@
+ #ifdef USE_CACHE
+ bool Dimension1::columnIsCached(const Cube &column, CubeQueue &workingBoundary,
+                                 CubeMap<2, vector<Cube>> &cache) const {
+-    auto &cachedBoundary = cache.find(column.index);
++    auto &cachedBoundary = cache.find(column.identity());
+     if (cachedBoundary.has_value()) {
+         for (auto &face : *cachedBoundary) {
+             workingBoundary.push(face);
+@@ -395,8 +395,8 @@
+         }
+     }
+ 
+-    cache[column.index] = std::move(cleanWb);
+-    cachedColumnIdx.push(column.index);
++    cache[column.identity()] = std::move(cleanWb);
++    cachedColumnIdx.push(column.identity());
+     if (cachedColumnIdx.size() > config.cacheSize) {
+         cache[cachedColumnIdx.front()] = {};
+         cachedColumnIdx.pop();
+@@ -416,7 +416,7 @@
+     auto birth =
+         (computePairsMode == IMAGE_PAIRS)
+             ? cgc.getBirth(column.x(), column.y(), column.z(), column.type(), 2)
+-            : column.birth;
++            : column.filtration();
+ 
+     const bool useApparentPairs =
+ #ifdef USE_APPARENT_PAIRS
+@@ -434,9 +434,9 @@
+     faces.clear();
+     enumerator.setBoundaryEnumerator(column);
+     while (enumerator.hasPreviousFace()) {
+-        if (checkEmergentPair && enumerator.nextFace.birth == birth) {
++        if (checkEmergentPair && enumerator.nextFace.filtration() == birth) {
+             auto nextColumnIndex =
+-                pivotColumnIndex.find(enumerator.nextFace.index);
++                pivotColumnIndex.find(enumerator.nextFace.identity());
+             if ((useApparentPairs && computePairsMode == INPUT_PAIRS) ||
+                 (useApparentPairsComp &&
+                  computePairsMode == COMPARISON_PAIRS) ||
+@@ -482,15 +482,15 @@
+     bool foundApparentPair = false;
+     coEnumerator.setCoboundaryEnumerator(pivot);
+     while (coEnumerator.hasNextCoface()) {
+-        if (coEnumerator.nextCoface.birth == pivot.birth) {
++        if (coEnumerator.nextCoface.filtration() == pivot.filtration()) {
+             vector<Cube> facesCopy = faces;
+             enumerator.setBoundaryEnumerator(coEnumerator.nextCoface);
+             while (enumerator.hasPreviousFace()) {
+                 if (enumerator.nextFace == pivot) {
+                     foundApparentPair = true;
+                 } else if (!foundApparentPair &&
+-                           enumerator.nextFace.birth ==
+-                               coEnumerator.nextCoface.birth) {
++                           enumerator.nextFace.filtration() ==
++                               coEnumerator.nextCoface.filtration()) {
+                     return false;
+                 }
+                 facesCopy.push_back(enumerator.nextFace);
+@@ -513,15 +513,15 @@
+         if (coEnumerator.nextCoface == column) {
+             break;
+         }
+-        if (coEnumerator.nextCoface.birth == pivot.birth) {
++        if (coEnumerator.nextCoface.filtration() == pivot.filtration()) {
+             vector<Cube> facesCopy = faces;
+             enumerator.setBoundaryEnumerator(coEnumerator.nextCoface);
+             while (enumerator.hasPreviousFace()) {
+                 if (enumerator.nextFace == pivot) {
+                     foundApparentPair = true;
+                 } else if (!foundApparentPair &&
+-                           enumerator.nextFace.birth ==
+-                               coEnumerator.nextCoface.birth) {
++                           enumerator.nextFace.filtration() ==
++                               coEnumerator.nextCoface.filtration()) {
+                     return false;
+                 }
+                 facesCopy.push_back(enumerator.nextFace);
+@@ -639,14 +639,14 @@
+                         ctr[i], pivot, j, faces, checkEmergentPair, cgc,
+                         enumerator, enumeratorAP, coEnumeratorAP,
+                         pivotColumnIndex)) {
+-                    pivotColumnIndex.emplace(pivot.index, i);
++                    pivotColumnIndex.emplace(pivot.identity(), i);
+ 
+                     if (computePairsMode == IMAGE_PAIRS
+ #ifdef USE_ISPAIRED
+-                        && isPairedComp[ctr[i].index]
++                        && isPairedComp[ctr[i].identity()]
+ #endif
+                     ) {
+-                        matchMapIm.emplace(ctr[i].index, pivot.index);
++                        matchMapIm.emplace(ctr[i].identity(), pivot.identity());
+                     }
+ 
+ #ifdef RUNTIME
+@@ -727,8 +727,8 @@
+                 }
+             }
+ #endif
+-            if (pivot.index != NONE_INDEX) {
+-                auto cachedIndex = pivotColumnIndex.find(pivot.index);
++            if (pivot.identity() != NONE_INDEX) {
++                auto cachedIndex = pivotColumnIndex.find(pivot.identity());
+                 if (cachedIndex.has_value()) {
+                     j = *cachedIndex;
+ #ifdef USE_CACHE
+@@ -736,27 +736,27 @@
+ #endif
+                     continue;
+                 } else {
+-                    pivotColumnIndex.emplace(pivot.index, i);
++                    pivotColumnIndex.emplace(pivot.identity(), i);
+                     if (computePairsMode == INPUT_PAIRS ||
+                         computePairsMode == COMPARISON_PAIRS) {
+-                        if (pivot.birth != ctr[i].birth) {
++                        if (pivot.filtration() != ctr[i].filtration()) {
+                             pairs.push_back(Pair(pivot, ctr[i]));
+                             if (computePairsMode == INPUT_PAIRS) {
+-                                matchMap.emplace(pivot.index, pairs.back());
++                                matchMap.emplace(pivot.identity(), pairs.back());
+                             }
+ #ifdef USE_ISPAIRED
+                             if (computePairsMode == COMPARISON_PAIRS) {
+-                                isPairedComp.emplace(ctr[i].index, true);
++                                isPairedComp.emplace(ctr[i].identity(), true);
+                             }
+ #endif
+                         }
+                     }
+                     if (computePairsMode == IMAGE_PAIRS
+ #ifdef USE_ISPAIRED
+-                        && isPairedComp[ctr[i].index]
++                        && isPairedComp[ctr[i].identity()]
+ #endif
+                     ) {
+-                        matchMapIm.emplace(ctr[i].index, pivot.index);
++                        matchMapIm.emplace(ctr[i].identity(), pivot.identity());
+                     }
+ #ifdef USE_CACHE
+                     if (numRecurse >= config.minRecursionToCache) {
+@@ -770,7 +770,7 @@
+ #endif
+ #ifdef USE_REDUCTION_MATRIX
+                     if (reductionColumn.size() > 0) {
+-                        reductionMatrix.emplace(ctr[i].index, reductionColumn);
++                        reductionMatrix.emplace(ctr[i].identity(), reductionColumn);
+                         reductionColumn.clear();
+ #ifdef RUNTIME
+                         ++numReductionColumns;
+@@ -784,7 +784,7 @@
+                 if ((computePairsMode == COMPARISON_PAIRS &&
+                      !useApparentPairsComp) ||
+                     computePairsMode == IMAGE_PAIRS) {
+-                    ctr[i].index = NONE_INDEX;
++                    ctr[i].clearIdentity();
+                     shouldClear = true;
+                 }
+ #endif
+@@ -799,7 +799,7 @@
+         if (shouldClear) {
+             auto newEnd =
+                 remove_if(ctr.begin(), ctr.end(), [](const Cube &cube) {
+-                    return cube.index == NONE_INDEX;
++                    return cube.identity() == NONE_INDEX;
+                 });
+             ctr.erase(newEnd, ctr.end());
+         }
+@@ -874,7 +874,7 @@
+     // Compute representative cycles for requested pairs, using the cached
+     // boundaries
+     for (auto &requestedPair : requestedPairs) {
+-        auto &cachedBoundary = cache[requestedPair.get().death.index];
++        auto &cachedBoundary = cache[requestedPair.get().death.identity()];
+         if (!cachedBoundary.has_value()) {
+             throw runtime_error(
+                 "A boundary that is needed to get all cycles was deleted from "
+--- a/src/src_3D/dimension_2.cpp
++++ b/src/src_3D/dimension_2.cpp
+@@ -160,11 +160,11 @@
+ #ifdef USE_STABLE_SORT_OR_STABLE_PARTITION
+     if (binaryInputs) {
+         std::stable_partition(dualEdges.begin(), dualEdges.end(),
+-                              [](Cube &cube) { return cube.birth == 0; });
++                              [](Cube &cube) { return cube.filtration() == 0; });
+     } else {
+         std::stable_sort(dualEdges.begin(), dualEdges.end(),
+                          [](const Cube &cube1, const Cube &cube2) {
+-                             return cube1.birth < cube2.birth;
++                             return cube1.filtration() < cube2.filtration();
+                          });
+     }
+ #else
+@@ -213,11 +213,11 @@
+ #ifdef USE_STABLE_SORT_OR_STABLE_PARTITION
+     if (binaryInputs) {
+         std::stable_partition(dualEdges.begin(), dualEdges.end(),
+-                              [](Cube &cube) { return cube.birth == 0; });
++                              [](Cube &cube) { return cube.filtration() == 0; });
+     } else {
+         std::stable_sort(dualEdges.begin(), dualEdges.end(),
+                          [](const Cube &cube1, const Cube &cube2) {
+-                             return cube1.birth < cube2.birth;
++                             return cube1.filtration() < cube2.filtration();
+                          });
+     }
+ #else
+@@ -262,7 +262,7 @@
+             parentIdx0 = ufComp.find(boundaryIndices[0]);
+             parentIdx1 = ufComp.find(boundaryIndices[1]);
+             birthIdxComp = ufComp.link(parentIdx0, parentIdx1);
+-            if (edge->birth != birth) {
++            if (edge->filtration() != birth) {
+                 birthCoordinates = uf.getCoordinates(birthIdx);
+                 pairs.push_back(
+                     Pair(*edge, Cube(birth, std::get<0>(birthCoordinates),
+@@ -270,13 +270,13 @@
+                                      std::get<2>(birthCoordinates), 0)));
+                 matchMap.emplace(birthIdxComp, pairs.back());
+             }
+-            edge->index = NONE_INDEX;
++            edge->clearIdentity();
+         }
+     }
+ 
+     auto new_end =
+         remove_if(dualEdges.begin(), dualEdges.end(),
+-                  [](const Cube &cube) { return cube.index == NONE_INDEX; });
++                  [](const Cube &cube) { return cube.identity() == NONE_INDEX; });
+     dualEdges.erase(new_end, dualEdges.end());
+ 
+ #ifdef RUNTIME
+@@ -315,7 +315,7 @@
+         if (parentIdx0 != parentIdx1) {
+             birthIdx = ufComp.link(parentIdx0, parentIdx1);
+             birth = ufComp.getBirth(birthIdx);
+-            if (edge->birth != birth) {
++            if (edge->filtration() != birth) {
+ #ifdef COMPUTE_COMPARISON
+                 auto birthCoordinates = ufComp.getCoordinates(birthIdx);
+                 pairsComp.push_back(
+@@ -327,20 +327,20 @@
+                 auto find1 = matchMap1.find(birthIdx);
+                 if (find0 != matchMap0.end() && find1 != matchMap1.end()) {
+                     matches.push_back(Match(find0->second, find1->second));
+-                    isMatched0.emplace(find0->second.birth.index, true);
+-                    isMatched1.emplace(find1->second.birth.index, true);
++                    isMatched0.emplace(find0->second.birth.identity(), true);
++                    isMatched1.emplace(find1->second.birth.identity(), true);
+ #ifdef COMPUTE_COMPARISON
+-                    isMatchedWithIndexComp.emplace(edge->index,
++                    isMatchedWithIndexComp.emplace(edge->identity(),
+                                                    matches.size() - 1);
+ #endif
+                 }
+             }
+-            edge->index = NONE_INDEX;
++            edge->clearIdentity();
+         } else {
+ #ifdef USE_APPARENT_PAIRS_COMP
+             ctrImage.push_back(*edge);
+             if (isApparentPair(*edge, enumeratorComp, coEnumeratorComp)) {
+-                edge->index = NONE_INDEX;
++                edge->clearIdentity();
+ #ifdef RUNTIME
+                 ++numApparentPairs;
+ #endif
+@@ -351,7 +351,7 @@
+ 
+     auto new_end = std::remove_if(
+         dualEdges.begin(), dualEdges.end(),
+-        [](const Cube &cube) { return cube.index == NONE_INDEX; });
++        [](const Cube &cube) { return cube.identity() == NONE_INDEX; });
+     dualEdges.erase(new_end, dualEdges.end());
+ #ifdef USE_APPARENT_PAIRS_COMP
+     reverse(ctrImage.begin(), ctrImage.end());
+@@ -373,12 +373,12 @@
+                                 CoboundaryEnumerator &coEnumerator) const {
+     enumerator.setBoundaryEnumerator(dualEdge);
+     while (enumerator.hasPreviousFace()) {
+-        if (enumerator.nextFace.birth == dualEdge.birth) {
++        if (enumerator.nextFace.filtration() == dualEdge.filtration()) {
+             coEnumerator.setCoboundaryEnumerator(enumerator.nextFace);
+             while (coEnumerator.hasNextCoface()) {
+                 if (coEnumerator.nextCoface == dualEdge) {
+                     return true;
+-                } else if (coEnumerator.nextCoface.birth == dualEdge.birth) {
++                } else if (coEnumerator.nextCoface.filtration() == dualEdge.filtration()) {
+                     return false;
+                 }
+             }
+@@ -456,7 +456,7 @@
+     // found, hence we need a set)
+     unordered_map<uint64_t, std::reference_wrapper<Pair>> requestedPairsByBirth;
+     for (auto &pair : requestedPairs) {
+-        requestedPairsByBirth.emplace(pair.get().birth.index, pair);
++        requestedPairsByBirth.emplace(pair.get().birth.identity(), pair);
+     }
+ 
+     // Run the union-find algorithm on the dual edges and collect all requested
+@@ -477,9 +477,9 @@
+                 dualConnectedComponentsByBirthIdx[olderBirthIdx].begin(),
+                 dualConnectedComponentsByBirthIdx[olderBirthIdx].end());
+ 
+-            auto maybeRequestedPair = requestedPairsByBirth.find(edge->index);
++            auto maybeRequestedPair = requestedPairsByBirth.find(edge->identity());
+             if (maybeRequestedPair != requestedPairsByBirth.end()) {
+-                cyclesByBirth[edge->index] = extractRepresentativeCycle(
++                cyclesByBirth[edge->identity()] = extractRepresentativeCycle(
+                     maybeRequestedPair->second, cgc,
+                     dualConnectedComponentsByBirthIdx[olderBirthIdx]);
+             }
+@@ -499,7 +499,7 @@
+     representativeCycles.reserve(requestedPairs.size());
+     for (auto &pair : requestedPairs) {
+         representativeCycles.emplace_back(
+-            std::move(cyclesByBirth[pair.get().birth.index]));
++            std::move(cyclesByBirth[pair.get().birth.identity()]));
+     }
+     return representativeCycles;
+ }
+--- a/src/src_nD/data_structures.cpp
++++ b/src/src_nD/data_structures.cpp
+@@ -315,7 +315,7 @@
+         birthtime.push_back(cgc.getBirth(getCoordinates(i)));
+     }
+     parent.push_back(star);
+-    birthtime.push_back(numeric_limits<value_t>::infinity());
++    birthtime.push_back(INFTY);
+ }
+ 
+ index_t UnionFindDual::find(index_t x) {

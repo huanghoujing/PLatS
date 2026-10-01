@@ -1,0 +1,15 @@
+{
+  "dice": 0.2795847466467723,
+  "surface_dice_tau2": 0.6952402523626994,
+  "leaderboard_formula_score": 0.5129992156266463,
+  "toposcore": 0.0,
+  "voi_score": 0.7704717922848616,
+  "voi_split": 0.48294479265637735,
+  "voi_merge": 0.5100753715837879,
+  "pred_components_raw": 1,
+  "pred_components_scored": 1,
+  "gt_components_scored": 1,
+  "pred_voxels_scored": 331924,
+  "gt_voxels_scored": 300750,
+  "ignore_policy": "annotated-box"
+}

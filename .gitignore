@@ -1,0 +1,8 @@
+weights/
+examples/**/*.npy
+third_party/**/build/
+__pycache__/
+*.pyc
+.venv/
+outputs/
+*.egg-info/

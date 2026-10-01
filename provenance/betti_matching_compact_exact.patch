@@ -1,0 +1,248 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -16 +16 @@
+-pybind11_add_module(betti_matching_binary_exact
++pybind11_add_module(betti_matching_compact_exact
+@@ -42 +42 @@
+-set_target_properties(betti_matching_binary_exact
++set_target_properties(betti_matching_compact_exact
+@@ -52 +52 @@
+-target_link_libraries(betti_matching_binary_exact PRIVATE Threads::Threads)
++target_link_libraries(betti_matching_compact_exact PRIVATE Threads::Threads)
+--- a/src/config.h
++++ b/src/config.h
+@@ -32,2 +32,2 @@
+-// dim3::Cube packs a 62-bit identity with a two-bit birth value.
+-#define NONE_INDEX ((uint64_t{1} << 62) - 1)
++// Compact dim3::Cube uses a 30-bit identity and two-bit birth value.
++#define NONE_INDEX ((uint32_t{1} << 30) - 1)
+--- a/src/_BettiMatching.cpp
++++ b/src/_BettiMatching.cpp
+@@ -149 +149 @@
+-        throw invalid_argument("betti_matching_binary_exact requires 3D inputs");
++        throw invalid_argument("betti_matching_compact_exact requires 3D inputs");
+@@ -153 +153 @@
+-            "betti_matching_binary_exact requires C-contiguous uint8 inputs");
++            "betti_matching_compact_exact requires C-contiguous uint8 inputs");
+@@ -157 +157 @@
+-            "betti_matching_binary_exact requires C-contiguous uint8 inputs");
++            "betti_matching_compact_exact requires C-contiguous uint8 inputs");
+@@ -163 +163 @@
+-                "betti_matching_binary_exact requires binary uint8 values {0, 1}");
++                "betti_matching_compact_exact requires binary uint8 values {0, 1}");
+@@ -170 +170 @@
+-                "betti_matching_binary_exact supports dimensions up to 1023 voxels");
++                "betti_matching_compact_exact supports dimensions up to 511 voxels");
+@@ -537 +537 @@
+-PYBIND11_MODULE(betti_matching_binary_exact, m) {
++PYBIND11_MODULE(betti_matching_compact_exact, m) {
+--- a/src/src_3D/data_structures.h
++++ b/src/src_3D/data_structures.h
+@@ -4,0 +5 @@
++#include <algorithm>
+@@ -6,0 +8,4 @@
++#include <deque>
++#include <limits>
++#include <stdexcept>
++#include <type_traits>
+@@ -23 +28 @@
+-    static constexpr index_t kCoordinateLimit = 1024;
++    static constexpr index_t kCoordinateLimit = 512;
+@@ -26,3 +31,3 @@
+-    static constexpr uint64_t kYShift = kZShift + 10;
+-    static constexpr uint64_t kXShift = kYShift + 10;
+-    static constexpr uint64_t kBirthShift = 62;
++    static constexpr uint64_t kYShift = kZShift + 9;
++    static constexpr uint64_t kXShift = kYShift + 9;
++    static constexpr uint64_t kBirthShift = 30;
+@@ -46,4 +51,4 @@
+-    uint64_t packed;
+-};
+-
+-static_assert(sizeof(Cube) == sizeof(uint64_t),
++    uint32_t packed;
++};
++
++static_assert(sizeof(Cube) == sizeof(uint32_t),
+@@ -142,15 +147,18 @@
+-template <int _dim, class _Tp> class CubeMap {
+-    /// Datastructure to map cube indices to values efficiently via a
+-    /// 1-dimensional array by mapping cube indices to (x,y,z,type) coordinates
+-    /// in a 4-dimensional space and representing this as a 1-dimensional array.
+-
+-  public:
+-    CubeMap(vector<index_t> shape);
+-    void emplace(uint64_t cube_index, _Tp element);
+-    const std::optional<_Tp> &find(uint64_t cube_index) const;
+-    void clear();
+-    optional<_Tp> &operator[](uint64_t cube_index);
+-
+-  private:
+-    vector<std::optional<_Tp>> elements;
+-    uint64_t computeCoordinateIndex(uint64_t cube_index) const;
++// Dense identities retain O(1) lookup, but absent entries cost one uint32.
++// Keep payload references stable during pool growth and preserve optional
++// assignment/reset semantics used by the upstream replay cache.
++template <int Dim> class CubeMapIndex {
++  protected:
++    explicit CubeMapIndex(const vector<index_t> &shape)
++        : shape(shape), strideX(size_t(shape[1]) * shape[2] * NUM_TYPES),
++          strideY(size_t(shape[2]) * NUM_TYPES) {}
++    size_t slotCount() const {
++        return size_t(shape[0]) * shape[1] * shape[2] * NUM_TYPES;
++    }
++    size_t slot(uint64_t identity) const {
++        const size_t x = (identity >> Cube::kXShift) & Cube::kCoordinateMask;
++        const size_t y = (identity >> Cube::kYShift) & Cube::kCoordinateMask;
++        const size_t z = (identity >> Cube::kZShift) & Cube::kCoordinateMask;
++        const size_t type = NUM_TYPES == 3 ? identity & 3 : 0;
++        return x * strideX + y * strideY + z * NUM_TYPES + type;
++    }
+@@ -158,55 +166,74 @@
+-    std::optional<_Tp> none = {};
+-    static const int NUM_TYPES = (_dim == 1 || _dim == 2) ? 3 : 1;
+-    const int stride_x_direction;
+-    const int stride_y_direction;
+-    const int stride_z_direction;
+-};
+-
+-template <int _dim, class _Tp>
+-CubeMap<_dim, _Tp>::CubeMap(vector<index_t> shape)
+-    : shape(shape), stride_x_direction(shape[1] * shape[2] * NUM_TYPES),
+-      stride_y_direction(shape[2] * NUM_TYPES), stride_z_direction(NUM_TYPES),
+-      elements(shape[0] * shape[1] * shape[2] * NUM_TYPES) {}
+-
+-template <int _dim, class _Tp>
+-void CubeMap<_dim, _Tp>::emplace(uint64_t cube_index, _Tp element) {
+-    if (cube_index != NONE_INDEX) {
+-        elements[computeCoordinateIndex(cube_index)] = element;
+-    } else {
+-        throw runtime_error(
+-            "CubeMap::emplace may not be called with NONE_INDEX magic number");
+-    }
+-}
+-
+-template <int _dim, class _Tp>
+-const std::optional<_Tp> &CubeMap<_dim, _Tp>::find(uint64_t cube_index) const {
+-    if (cube_index != NONE_INDEX) {
+-        return elements[computeCoordinateIndex(cube_index)];
+-    }
+-    return none;
+-}
+-
+-template <int _dim, class _Tp>
+-optional<_Tp> &CubeMap<_dim, _Tp>::operator[](uint64_t cube_index) {
+-    if (cube_index != NONE_INDEX) {
+-        return elements[computeCoordinateIndex(cube_index)];
+-    }
+-    throw runtime_error("CubeMap subscript operator may not be called with "
+-                        "NONE_INDEX magic number");
+-}
+-
+-template <int _dim, class _Tp>
+-uint64_t CubeMap<_dim, _Tp>::computeCoordinateIndex(uint64_t cube_index) const {
+-    int x = (cube_index >> Cube::kXShift) & Cube::kCoordinateMask;
+-    int y = (cube_index >> Cube::kYShift) & Cube::kCoordinateMask;
+-    int z = (cube_index >> Cube::kZShift) & Cube::kCoordinateMask;
+-    int type = (_dim == 1 || _dim == 2) ? (cube_index & 0x3) : 0;
+-
+-    return x * stride_x_direction + y * stride_y_direction +
+-           z * stride_z_direction + type;
+-}
+-
+-template <int _dim, class _Tp> void CubeMap<_dim, _Tp>::clear() {
+-    elements.clear();
+-    elements.resize(shape[0] * shape[1] * shape[2] * NUM_TYPES);
+-}
++    const size_t strideX, strideY;
++    static constexpr size_t NUM_TYPES = (Dim == 1 || Dim == 2) ? 3 : 1;
++};
++
++template <int Dim, class T, class Enable = void> class CubeMap
++    : private CubeMapIndex<Dim> {
++  public:
++    explicit CubeMap(vector<index_t> shape)
++        : CubeMapIndex<Dim>(shape), handles(this->slotCount(), 0) {}
++    void emplace(uint64_t identity, T value) {
++        (*this)[identity] = std::move(value);
++    }
++    const optional<T> &find(uint64_t identity) const {
++        if (identity == NONE_INDEX) return none;
++        const uint32_t handle = handles[this->slot(identity)];
++        return handle == 0 ? none : payloads[handle - 1];
++    }
++    optional<T> &operator[](uint64_t identity) {
++        if (identity == NONE_INDEX)
++            throw runtime_error("CubeMap subscript may not use NONE_INDEX");
++        uint32_t &handle = handles[this->slot(identity)];
++        if (handle == 0) {
++            if (payloads.size() >= numeric_limits<uint32_t>::max())
++                throw overflow_error("CubeMap payload handle overflow");
++            payloads.emplace_back();
++            handle = static_cast<uint32_t>(payloads.size());
++        }
++        return payloads[handle - 1];
++    }
++    void clear() {
++        std::fill(handles.begin(), handles.end(), 0);
++        payloads.clear();
++    }
++  private:
++    vector<uint32_t> handles;
++    deque<optional<T>> payloads;
++    optional<T> none;
++};
++
++// Pivot-column numbers and packed identities fit uint32 for the supported
++// input sizes. Return a small optional by value; no optional object is stored
++// per cell. The sentinel is checked instead of silently truncating an index.
++template <int Dim, class T>
++class CubeMap<Dim, T, enable_if_t<is_integral_v<T>>>
++    : private CubeMapIndex<Dim> {
++  public:
++    explicit CubeMap(vector<index_t> shape)
++        : CubeMapIndex<Dim>(shape), elements(this->slotCount(), EMPTY) {}
++    void emplace(uint64_t identity, T value) {
++        if (identity == NONE_INDEX)
++            throw runtime_error("CubeMap::emplace may not use NONE_INDEX");
++        if (uint64_t(value) >= EMPTY)
++            throw overflow_error("CubeMap scalar exceeds uint32 storage");
++        elements[this->slot(identity)] = static_cast<uint32_t>(value);
++    }
++    optional<T> find(uint64_t identity) const {
++        if (identity == NONE_INDEX) return nullopt;
++        const uint32_t value = elements[this->slot(identity)];
++        return value == EMPTY ? nullopt : optional<T>(static_cast<T>(value));
++    }
++    class Reference {
++      public:
++        Reference(CubeMap &map, uint64_t identity) : map(map), identity(identity) {}
++        Reference &operator=(T value) { map.emplace(identity, value); return *this; }
++      private:
++        CubeMap &map;
++        uint64_t identity;
++    };
++    Reference operator[](uint64_t identity) { return Reference(*this, identity); }
++    void clear() { std::fill(elements.begin(), elements.end(), EMPTY); }
++  private:
++    static constexpr uint32_t EMPTY = numeric_limits<uint32_t>::max();
++    vector<uint32_t> elements;
++};
+--- a/src/src_3D/data_structures.cpp
++++ b/src/src_3D/data_structures.cpp
+@@ -13,3 +13,3 @@
+-    : packed(((uint64_t)_x << kXShift) | ((uint64_t)_y << kYShift) |
+-             ((uint64_t)_z << kZShift) | (uint64_t)_type |
+-             ((uint64_t)_birth << kBirthShift)) {
++    : packed(((uint32_t)_x << kXShift) | ((uint32_t)_y << kYShift) |
++             ((uint32_t)_z << kZShift) | (uint32_t)_type |
++             ((uint32_t)_birth << kBirthShift)) {
+@@ -19,4 +19,4 @@
+-    : packed(((uint64_t)coordinates[0] << kXShift) |
+-             ((uint64_t)coordinates[1] << kYShift) |
+-             ((uint64_t)coordinates[2] << kZShift) | (uint64_t)_type |
+-             ((uint64_t)_birth << kBirthShift)) {
++    : packed(((uint32_t)coordinates[0] << kXShift) |
++             ((uint32_t)coordinates[1] << kYShift) |
++             ((uint32_t)coordinates[2] << kZShift) | (uint32_t)_type |
++             ((uint32_t)_birth << kBirthShift)) {

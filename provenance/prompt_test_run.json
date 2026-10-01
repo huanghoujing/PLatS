@@ -1,0 +1,25 @@
+{
+  "command": "prompt",
+  "seconds": 3.7243776321411133,
+  "device": "cuda:0",
+  "dtype": "torch.bfloat16",
+  "input_sha256": "77ab4ceef1b745ceaf4d142750725a79cb41b0c68f2166e98f2d531585d3d7a1",
+  "prediction_sha256": "b90af968617302b86a62545b13fd8d26963bee8792a813c8df8a55a11755c4e8",
+  "input_shape": [
+    320,
+    320,
+    320
+  ],
+  "canvas_offset": [
+    0,
+    0,
+    0
+  ],
+  "source_module": "/home/x/Project/vesuvius_p2sd/submission/PLatS/src/vesuvius_p2sd/research/auto_instance_seg.py",
+  "code_root": "/home/x/Project/vesuvius_p2sd/submission/PLatS",
+  "weights_sha256": {
+    "ae.pt": "d677d01be344c37cb15510decc8bf78946ca139e1e8e526a47b1366485787f25",
+    "foreground.pt": "0b4c088e2dbb1df4273d7cf2fa35bf268678c623475aa5a7dd49846f780f567c",
+    "p2sd.pt": "171e56792d06f80db0d07a65456a15a1c0dd3534bb3485c3b62e5b9f057b6c06"
+  }
+}

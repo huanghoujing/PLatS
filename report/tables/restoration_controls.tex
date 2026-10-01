@@ -1,0 +1,16 @@
+\begin{table*}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrr}
+\toprule
+Method & Standard LB & Filter only & Restore + filter & Topology-only diagnostic \\
+\midrule
+Winner & 0.6176 & 0.6176 & 0.6537 & 0.6753 \\
+PLatS auto & 0.5305 & 0.5304 & 0.6124 & 0.6257 \\
+PLatS GT8 union & 0.5627 & 0.5627 & 0.6598 & 0.6611 \\
+\bottomrule
+\end{tabular}
+\caption{Ignore-restoration controls. GT8 union uses deterministic sheet-ID ownership on overlaps and retains its original union exactly. It uses GT prompts and is not an automatic discovery result. The topology-only hybrid replaces only TopoScore.}
+\label{tab:restorecontrols}
+\end{table*}

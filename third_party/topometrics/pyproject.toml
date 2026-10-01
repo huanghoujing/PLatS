@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "topometrics-3d"
+version = "0.1.0"
+description = "Topological Metrics for 3D instance segmentation of surfaces."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Giorgio Angelotti" }]
+dependencies = [
+  "numpy",
+  "surface-distance",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,13 @@
+numpy==2.5.1
+scipy==1.18.0
+connected-components-3d==4.0.0
+nibabel==5.4.2
+PyYAML==6.0.3
+matplotlib==3.11.1
+Pillow==12.3.0
+tifffile==2026.6.1
+zarr==3.2.1
+surface-distance==0.1
+pybind11==3.0.4
+cmake==4.4.0
+scikit-image==0.26.0

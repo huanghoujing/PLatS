@@ -1,0 +1,17 @@
+\begin{table*}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrrrr}
+\toprule
+Arm & Acc$_{.25}$ & Acc$_{.50}$ & GT IoU$_{.50}$ & Pred & GT & Merges & Splits \\
+\midrule
+Foreground CC6 & 0.031 & 0.007 & 0.038 & 299.953 & 7.642 & 1.189 & 0.000 \\
+0058 & 0.420 & 0.071 & 0.057 & 6.821 & 7.642 & 0.330 & 0.000 \\
+0076 & 0.386 & 0.064 & 0.048 & 6.217 & 7.642 & 0.302 & 0.000 \\
+0076+100k & 0.385 & 0.059 & 0.046 & 6.396 & 7.642 & 0.321 & 0.000 \\
+\bottomrule
+\end{tabular}
+\caption{Per-case means of annotated-band instance diagnostics. Acc$_\tau$ is TP/(TP+FP+FN) at IoU $\tau$, not integrated AP. GT IoU sums IoUs of matches at threshold 0.50 and divides by the GT count, assigning zero to unmatched bands. Pred/GT are counts; merge and split definitions are those of the inherited matching implementation.}
+\label{tab:autoinst}
+\end{table*}

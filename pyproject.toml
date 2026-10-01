@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+[project]
+name = "plats-reproduction"
+version = "0.1.0"
+description = "PLatS: Papyrus Surface Segmentation in Latent Space"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{name = "Houjing Huang", email = "houjing.huang@gmail.com"}]
+[tool.setuptools.packages.find]
+where = ["src"]

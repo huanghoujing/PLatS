@@ -1,0 +1,31 @@
+{
+  "case": "sample_00860",
+  "selection": "Same crop as the report method/failure figures; first eligible sheet in frozen evaluation order",
+  "source": "hf buckets scrollprize/datasets surfaces/kaggle/{images,labels}/sample_00860.tif",
+  "original_metadata": {
+    "case_id": "sample_00860",
+    "shape": [
+      320,
+      320,
+      320
+    ],
+    "num_components": 14,
+    "foreground_voxels": 3232212,
+    "ignore_voxels": 16377884,
+    "ignore_format": "packbits_uint8",
+    "ignore_label_source": 2,
+    "orientation": "tif.transpose(2,1,0) = project-internal (t6) order",
+    "image_border_zero": 5,
+    "components_dtype": "uint8",
+    "image_dtype": "uint8",
+    "erased_border_width": 0,
+    "component_source": "hf_label_connected_components_6conn_unfiltered",
+    "image_path": "/home/x/Project/vesuvius_p2sd/datasets/hf_kaggle_202607/cases/sample_00860/image.npy",
+    "components_path": "/home/x/Project/vesuvius_p2sd/datasets/hf_kaggle_202607/cases/sample_00860/components.npy",
+    "ignore_path": "/home/x/Project/vesuvius_p2sd/datasets/hf_kaggle_202607/cases/sample_00860/ignore.npy",
+    "source": "hf buckets scrollprize/datasets surfaces/kaggle/{images,labels}/sample_00860.tif"
+  },
+  "image_sha256": "77ab4ceef1b745ceaf4d142750725a79cb41b0c68f2166e98f2d531585d3d7a1",
+  "preprocessing": "Original TIFF [Z,Y,X] transposed to [X,Y,Z]; uint8 CT; five-voxel image border zeroed. GT borders retained.",
+  "reference_use": "GT supplies prompt coordinates and scoring targets; automatic inference does not access GT or ignore"
+}

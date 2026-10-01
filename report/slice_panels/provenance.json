@@ -1,0 +1,87 @@
+{
+  "rendering": {
+    "method": "Native 2D array slices; nearest-neighbor display; no projection or resampling",
+    "same_slice_and_crop_within_each_comparison": true,
+    "interpolation": "nearest",
+    "directory": "runs_from_260914/evaluation/06_paper_failure_analysis/2d_slices",
+    "coordinate_convention": "TIFF stack [z,y,x]; internal [x,y,z]; z plane = internal[:,:,z].T",
+    "coordinate_audit": {
+      "convention": "TIFF stack [z,y,x]; project internal [x,y,z]. Display z by internal[:,:,z].T; no interpolation.",
+      "previous_error": "Figure code mislabeled internal axis 0 (TIFF x) as z. CT and masks were mutually aligned.",
+      "cases": [
+        {
+          "case_id": "sample_00865",
+          "source": "datasets/hf_kaggle_202607/raw/images/sample_00865.tif",
+          "sha256": "a345b3c957af415720aca2632792d8d2486dcded5a060daaded081cfe41aa566",
+          "internal_equals_tiff_transpose_210_with_5_voxel_zero_border": true
+        },
+        {
+          "case_id": "sample_00860",
+          "source": "datasets/hf_kaggle_202607/raw/images/sample_00860.tif",
+          "sha256": "709fc388a084ba509c830dff169b04bbde3be8413123b3b240c5613b9f898b91",
+          "internal_equals_tiff_transpose_210_with_5_voxel_zero_border": true
+        },
+        {
+          "case_id": "sample_00829",
+          "source": "datasets/hf_kaggle_202607/raw/images/sample_00829.tif",
+          "sha256": "380ea6a8280e7b7740e6fd75da2b07cdd16dce52657e176a637fac6e605e4644",
+          "internal_equals_tiff_transpose_210_with_5_voxel_zero_border": true
+        }
+      ]
+    }
+  },
+  "binary": {
+    "case_id": "sample_00860",
+    "axis": 2,
+    "slice_index": 160,
+    "zoom_yx": [
+      159,
+      16,
+      90
+    ],
+    "native_panels": "runs_from_260914/evaluation/06_paper_failure_analysis/2d_slices/binary_slice.npz",
+    "source_hashes": {
+      "runs_from_260914/evaluation/05_paper_winner_ignore106_gpu0_gpu2/winner/sample_00860/prediction.npz": "cd514c029079f80f43ba0c6f27902177b08fdf0d96c52eebe9961fc68659bf7d",
+      "runs_from_260914/evaluation/04_paper_automatic_hidden106_gpu0_gpu2/0058_kaggle/cases/sample_00860/instances.npz": "aeb89b984074615e95ef1d066f10bfa10c0edd300f85a93c38b8a32e41dfad7e",
+      "datasets/hf_kaggle_202607/cases/sample_00860/components.npy": "da9771801188a7107fca71f7157f3668a689311a5d368099afe666d5acfbe846",
+      "datasets/hf_kaggle_202607/cases/sample_00860/image.npy": "77ab4ceef1b745ceaf4d142750725a79cb41b0c68f2166e98f2d531585d3d7a1",
+      "datasets/hf_kaggle_202607/cases/sample_00860/ignore.npy": "c324ef1d01bae56dc315e14e3566204122255384a8080bcfe8b5dece21ebd4d8"
+    }
+  },
+  "ignore": {
+    "case_id": "sample_00829",
+    "sheet_id": 6,
+    "axis": 2,
+    "slice_index": 95,
+    "crop_start": [
+      0,
+      97
+    ],
+    "crop_stop": [
+      287,
+      320
+    ],
+    "raw_2d_components": 1,
+    "erased_2d_components": 43,
+    "raw_slice_voxels": 1053,
+    "removed_slice_voxels": 386,
+    "native_panels": "runs_from_260914/evaluation/06_paper_failure_analysis/2d_slices/ignore_slice.npz",
+    "selection": "Maximum visible 2D component count after erasure among raw continuous native z slices with >=1000 foreground and >=20 removed voxels",
+    "source_hashes": {
+      "runs_from_260914/evaluation/06_paper_failure_analysis/figure_nifti/sample_00829/sheet_0006/raw.nii.gz": "5fa9b250d956e51c5eda8a2af9cdace8e9c1aeea7eea6251656012e9baf49120",
+      "runs_from_260914/evaluation/06_paper_failure_analysis/figure_nifti/sample_00829/sheet_0006/erased.nii.gz": "56b3eeff8491b7e8010cb78a0c76185370a56993dc8d2fd8c47979c5a10aa157",
+      "runs_from_260914/evaluation/06_paper_failure_analysis/figure_nifti/sample_00829/sheet_0006/restored.nii.gz": "5fa9b250d956e51c5eda8a2af9cdace8e9c1aeea7eea6251656012e9baf49120",
+      "runs_from_260914/evaluation/06_paper_failure_analysis/figure_nifti/sample_00829/sheet_0006/removed.nii.gz": "49c28e3b0e5fbcfd4887051803057094e70db1d725dbcf5ce91decfe340feae5",
+      "datasets/hf_kaggle_202607/cases/sample_00829/image.npy": "fcf8de28b553d6706b3c8d8288a2d37197b48d750f0846fe48b7c893061db68a"
+    }
+  },
+  "figures": {
+    "research/papers/latent_sheet_report/figures/binary_failure_main.png": "f3745045d803ce24b5a9e324c61e3e41a3a3e172b104dc9a09c35acedd9a243b",
+    "research/papers/latent_sheet_report/figures/binary_failure_zoom.png": "74e6f08eea42198c1c007b49b8a60da2381bb2e3fb3be04f14f9f86a5d20ae2a",
+    "research/papers/latent_sheet_report/figures/ignore_failure.png": "002c618443c89a705e609929a70486a538f785fbf1d0101a5203397eef83d942"
+  },
+  "assets": {
+    "ignore_slice.npz": "6e46b1aeeb49d8c54d6b7b669545dc5e0eee411f6ea5cd3c74d442bf4582ddd8",
+    "binary_slice.npz": "6f157038ca649c55a5662ea41ff5b2c61a9d74e79813c1a0a35002ca1d232094"
+  }
+}

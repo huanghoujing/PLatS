@@ -1,0 +1,12 @@
+{
+  "prompt": {
+    "expected_prediction_dice": 0.9970399449264054,
+    "voxel_id_agreement": 0.9999400329589844,
+    "exact_array_match": false
+  },
+  "automatic": {
+    "expected_prediction_dice": 1.0,
+    "voxel_id_agreement": 1.0,
+    "exact_array_match": true
+  }
+}

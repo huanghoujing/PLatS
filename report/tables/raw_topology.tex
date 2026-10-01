@@ -1,0 +1,18 @@
+\begin{table*}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrrrr}
+\toprule
+& \multicolumn{3}{c}{Per-sheet means} & & \multicolumn{3}{c}{Union means} \\
+Checkpoint & $b_0$ & $b_1$ & $b_2$ & $P_{100}$ & $b_0$ & $b_1$ & $b_2$ \\
+\midrule
+0058 & 1.183 & 0.165 & 0.000 & 87.30\% & 8.179 & 63.292 & 9.528 \\
+0076 & 1.385 & 0.658 & 0.263 & 81.94\% & 9.594 & 19.906 & 3.557 \\
+0076+100k & 1.308 & 0.534 & 0.211 & 82.46\% & 8.953 & 40.302 & 5.896 \\
+GT & 1.000 & 0.001 & 0.001 & 99.74\% & 7.642 & 0.009 & 0.009 \\
+\bottomrule
+\end{tabular}
+\caption{Whole-mask raw Betti counts before scoring erasure or component cleanup. Sheet statistics cover 764 eligible bands; union statistics cover 106 cases. $P_{100}$ denotes the fraction of sheets with $(b_0,b_1,b_2)=(1,0,0)$. These counts do not replace spatial feature matching.}
+\label{tab:topology}
+\end{table*}

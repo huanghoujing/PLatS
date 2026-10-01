@@ -1,0 +1,38 @@
+\documentclass[10pt,twocolumn,letterpaper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[pagenumbers]{cvpr}
+\usepackage{amsmath,amssymb,booktabs,multirow}
+\definecolor{cvprblue}{rgb}{0.21,0.49,0.74}
+\usepackage[breaklinks,colorlinks,allcolors=cvprblue]{hyperref}
+\hypersetup{pdftitle={PLatS: Papyrus Surface Segmentation in Latent Space},pdfauthor={Houjing Huang}}
+\usepackage{url}
+\newcommand{\pLatS}{PLatS}
+\newcommand{\pTwoSD}{P2SD}
+\newcommand{\mse}{\operatorname{MSE}}
+\newcommand{\relu}{\operatorname{ReLU}}
+\newcommand{\sigmoid}{\operatorname{sigmoid}}
+\title{PLatS: Papyrus Surface Segmentation\protect\\in Latent Space}
+\author{Houjing Huang\\\texttt{houjing.huang@gmail.com}}
+\begin{document}
+\raggedbottom
+\maketitle
+\begin{abstract}
+\input{sections/abstract}
+\end{abstract}
+\input{sections/method}
+\input{sections/experiments}
+\clearpage
+{\small
+\bibliographystyle{ieeenat_fullname}
+\bibliography{references}
+}
+\clearpage
+\appendix
+\renewcommand{\dbltopfraction}{0.95}
+\renewcommand{\textfraction}{0.05}
+\setcounter{dbltopnumber}{4}
+\setcounter{topnumber}{4}
+\setcounter{totalnumber}{6}
+\section*{Supplementary Material}
+\input{sections/supplementary}
+\end{document}

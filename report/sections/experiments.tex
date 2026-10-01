@@ -1,0 +1,82 @@
+\section{Experiments}
+\label{sec:experiments}
+
+\paragraph{Setup.}
+We use Kaggle-only checkpoint \textbf{0058} for the main comparisons and
+evaluate all \textbf{106 released test cubes}. Training-case IDs are excluded,
+but labels are now public and some crops were previously inspected; this is
+not a fresh blind submission. External-data checkpoints, training details and
+all 1/2/4/8-point results are in Supplementary.
+
+\subsection{Binary segmentation and topology}
+We first apply the original leaderboard protocol: erase source-ignore voxels
+from prediction and GT, then compute the public formula~\cite{vesuviuseval}:
+\begin{equation}
+ J=0.35\,\mathrm{SD}_2+0.30\,\mathrm{Topo}+0.35\,\mathrm{VOI}.
+ \label{eq:formula}
+\end{equation}
+$J$ is the combined score, $\mathrm{SD}_2$ Surface Dice at two voxels,
+$\mathrm{Topo}$ exact matched TopoScore~\cite{stucki2022betti}, and
+$\mathrm{VOI}$ the public variation-of-information score.
+Table~\ref{tab:lb} compares the released winner with automatic PLatS,
+using no GT prompts and equal weight per cube.
+
+\input{tables/standard_lb}
+
+The winner achieves the higher combined score, but can connect distinct
+sheets (Fig.~\ref{fig:binary}, top). PLatS separates layers in this example
+while missing some bands. As a separate shape diagnostic, 87.3\% of 764
+\emph{GT-prompted}, eight-point sheet predictions have one component and no
+tunnels or cavities before cleanup. Single-point codes attain 0.912 AUROC
+for distinguishing same-sheet from different-sheet pairs. These results
+support the representation; they do not guarantee correct instance discovery.
+
+\begin{figure*}[!t]
+ \centering
+ \includegraphics[width=\textwidth]{figures/binary_failure_main.png}
+ \includegraphics[width=\textwidth]{figures/ignore_failure.png}
+ \caption{\textbf{Two different topology failures.}
+ Top: a winner component joins six annotated bands in case 00860 ($z=160$);
+ PLatS preserves gaps but misses bands. Colors are IDs within each method.
+ Bottom: ignore erasure cuts a predicted sheet in case 00829 ($z=95$).
+ Its whole-volume topology changes from one component and no tunnels to
+ 495 components and 1,023 tunnels. Restoring its own voxels reverses the cuts.
+ Orange marks removed voxels. Both rows use native $z$ slices; selection
+ rules and the enlarged orange-square crop are in Supplementary.}
+ \label{fig:binary}\label{fig:ignore}
+\end{figure*}
+
+\begin{figure*}[!t]
+ \centering\includegraphics[width=\textwidth]{figures/large_ink.png}
+ \caption{\textbf{Centimeter-scale surfaces and ink.} Independently flattened
+ CT texture and ink probabilities from PLatS on two PHerc0139 regions.
+ Darker ink pixels indicate higher probability. Whole charts expose gaps and
+ stitching limitations; native PNGs accompany the report.}
+ \label{fig:largeink}
+\end{figure*}
+
+\subsection{Separating ignore cuts from model defects}
+Erasing ignored labels can create holes in an otherwise continuous prediction
+(Fig.~\ref{fig:ignore}, bottom). We therefore also report an
+\emph{ignore-restoration diagnostic}: restore cut instances from their own
+pre-erasure predictions, exclude entirely ignored instances, and remove
+instances smaller than 5,000 voxels \emph{after restoration}.
+The winner's identities are raw connected components; PLatS provides sheet IDs.
+GT remains erased. Table~\ref{tab:modified} uses the same three formula terms.
+This is \emph{not an official leaderboard score}: restored unknown foreground
+can still incur penalties. The exact rule and filtering controls are in
+Supplementary.
+
+\input{tables/modified_lb}
+The winner still has the higher combined score; restoration reveals sensitivity
+to ignore cuts rather than establishing a new ranking.
+
+\subsection{From sheets to ink}
+We independently mesh and flatten predictions, then apply the same frozen
+ink model~\cite{scrollfiesta,rabinovich2017slim,scrollprizeink}.
+Figure~\ref{fig:largeink} shows two PHerc0139 regions, approximately
+$20\times33$ and $23\times44$~mm. Each starts from one published-track point;
+later prompts come from predictions. No reference layout or ink labels enter
+reconstruction or rendering. The pages test stitching across many crops:
+visible gaps and diffuse ink remain, and no transcription accuracy or newly
+recovered text is claimed. The ink model's training includes this scroll.

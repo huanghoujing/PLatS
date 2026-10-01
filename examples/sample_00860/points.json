@@ -1,0 +1,47 @@
+{
+  "points": [
+    [
+      155,
+      117,
+      153
+    ],
+    [
+      3,
+      255,
+      5
+    ],
+    [
+      316,
+      46,
+      316
+    ],
+    [
+      3,
+      162,
+      315
+    ],
+    [
+      314,
+      152,
+      5
+    ],
+    [
+      316,
+      70,
+      151
+    ],
+    [
+      157,
+      104,
+      316
+    ],
+    [
+      154,
+      195,
+      5
+    ]
+  ],
+  "sheet_id": 9,
+  "coordinate_order": "native .npy axis order (X,Y,Z for this example)",
+  "source": "Frozen 8-point evaluation manifest; nested prefixes 1/2/4/8"
+}

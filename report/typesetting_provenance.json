@@ -1,0 +1,6 @@
+{
+  "tectonic_version": "tectonic@0.17.0",
+  "tectonic_asset_url": "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.17.0/tectonic-0.17.0-x86_64-unknown-linux-musl.tar.gz",
+  "archive_sha256": "8533d07f9ccbd7a65824b9e0459041bca34af1eb33daba48f59215593753a3b7",
+  "author_kit_revision": "291758547e923160eb4d37079b7b9f0dfce82355"
+}
