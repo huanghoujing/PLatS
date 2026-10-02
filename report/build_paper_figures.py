@@ -22,7 +22,7 @@ def box(ax,x,y,w,h,text,color='#e9f1f8',fontsize=8.5):
 def arrow(ax,a,b,label=None,dashed=False,color='#415b73'):
  ax.annotate('',xy=b,xytext=a,arrowprops=dict(arrowstyle='->',lw=1,color=color,linestyle='--' if dashed else '-'))
  if label:ax.text((a[0]+b[0])/2,(a[1]+b[1])/2+.09,label,ha='center',fontsize=7.5,color=color)
-def architecture():
+def architecture(*, include_inference=True):
  # Two compact diagrams: one central flow, with objectives on separate rows.
  blue='#e3eff9'; gray='#edf0f2'; gold='#fff1d9'
  fig,ax=canvas(1.48)
@@ -44,7 +44,7 @@ def architecture():
  arrow(ax,(1.07,1.83),(1.38,1.83))
  arrow(ax,(2.48,1.83),(3.31,1.83),dashed=True)
  # Prediction row.
- for x,w,t,c in [(.07,.96,'CT crop X',gray),(1.42,1.02,'CT encoder C',blue),
+ for x,w,t,c in [(.07,.96,'CT crop X',gray),(1.42,1.02,'CT encoder +\ncontext C',blue),
                  (2.83,1.42,'Point transformer T',blue),(4.64,.93,'Code z',blue),
                  (5.95,.84,'Frozen D',gray)]:box(ax,x,.83,w,.42,t,c,8.8)
  for a,b in [((1.07,1.04),(1.38,1.04)),((2.48,1.04),(2.79,1.04)),
@@ -52,7 +52,7 @@ def architecture():
  arrow(ax,(5.10,1.29),(5.10,1.60),dashed=True)
  ax.text(6.37,.65,'Sheet mask',ha='center',fontsize=8.5,color='#435666')
  # Positive prompts enter the transformer; dense binary supervision branches left.
- box(ax,.07,.06,1.05,.39,'Binary head B',blue,8.7)
+ box(ax,.07,.06,1.05,.39,'Co-trained B',blue,8.7)
  box(ax,1.48,.06,1.10,.39,'Union BCE + Dice',gold,8)
  box(ax,2.94,.06,1.2,.39,'Positive points P',gray,8.8)
  arrow(ax,(3.54,.49),(3.54,.79))
@@ -60,7 +60,8 @@ def architecture():
  arrow(ax,(1.16,.255),(1.44,.255),dashed=True)
  ax.text(4.63,.20,'Blue: trainable   Gray: frozen / data',fontsize=7.9,color='#435666')
  save(fig,'training')
- actual_inference()
+ if include_inference:
+  actual_inference()
 
 def actual_inference():
  from matplotlib.colors import ListedColormap

@@ -2,6 +2,7 @@
 \label{supp:losses}
 \input{sections/model_details}
 \input{sections/architecture}
+\input{sections/query_extensions}
 \subsection{Loss definitions and architecture settings}
 For a probability map $Q$, binary target $S$, valid voxel set $\Omega$ and
 positive BCE weight $\omega$, the segmentation loss in the main text is
@@ -46,10 +47,11 @@ factor-four stem. Point Fourier encoding has eight bands. Context and
 point-refinement attention each have four blocks, 512-dimensional features
 and per-axis rotary coordinates; refinement uses eight heads.
 The joint binary branch has its own four-block refiner and convolutional
-decoder channels $(512,256,128,64,32,16)$. Dense auxiliary training decodes
-$5^3$ context crops into $160^3$ masks, while sheet codes retain the $320^3$
-crop extent. All main-model checkpoint, configuration and latent-statistics
-hashes accompany the result snapshot.
+decoder channels $(512,256,128,64,32,16)$. Historical 0058 binary training
+decodes $5^3$ context crops into $160^3$ masks; 0076 and the new scratch recipe
+use the late feature crop in Fig.~\ref{fig:p2sd_modules}. Prompted sheet codes
+retain the full $320^3$ crop extent. Checkpoint, configuration and
+latent-statistics hashes accompany the result snapshot.
 The AE and main CT model use Kaggle-derived t6 training labels with topology
 repair/cleanup; external scroll labels are excluded from the main model.
 Evaluation uses the released test annotations, not those repaired training
@@ -134,10 +136,11 @@ vertices. \textbf{0076+100k} continues for 100,000 steps with geometric
 consistency. All three retain the same frozen AE. Changed data, objectives and
 training duration prevent a causal attribution to any one factor.
 
-For the mixed-data query term, the frozen AE head $h$ supplies a teacher
-prediction at query $q$ from clean code $E(S_i)$; Smooth L1 regresses the predicted
-code's query output toward that teacher. The continuation additionally compares
-aligned decoded probabilities under flips and right-angle rotations:
+Both mixed-data checkpoints enable the P2SD-owned GT-distance term in
+Eq.~\ref{eq:gtquery}, with weight 0.15, 4,096 sampled queries and additional
+mesh-vertex distance targets. Their frozen-AE query-distillation option is
+disabled. The continuation additionally compares aligned decoded probabilities
+under flips and right-angle rotations:
 \begin{equation}
  \mathcal L_{\rm geo}=1-
  \frac{2\langle A_g,B_g\rangle+1}{\|A_g\|_2^2+\|B_g\|_2^2+1}.
@@ -239,7 +242,7 @@ winner merger candidates. The central TIFF-stack slice is used, with a
 four-connected winner region joining distinct GT bands. The ignore example maximizes induced tunnel count among raw $(1,0,0)$
 0058 masks with visible support. Source hashes, selection metadata, native
 voxels and slice coordinates are saved in the failure-analysis run. Selection
-is diagnostic, not random or representative. Figures 4 and 6 show native 2D
+is diagnostic, not random or representative. Figures~\ref{fig:binary} and~\ref{fig:binaryzoom} show native 2D
 slices with nearest-neighbor display, using the same plane and crop across
 methods. TIFF arrays are $[z,y,x]$ and project arrays are $[x,y,z]$;
 a displayed $z$ slice is the transpose of internal array $[:,:,z]$.
@@ -257,6 +260,7 @@ The winner component connects distinct GT bands; automatic PLatS has lower
  coverage. Twenty-seven predicted voxels in the sampled gap are known background;
  none of its 34 samples are ignored. The red dashed segment marks this sampled
  gap in GT and winner panels. Labels are displayed without dilation or smoothing.}
+ \label{fig:binaryzoom}
 \end{figure*}
 
 \section{Large pages and spiral-fitting integration}

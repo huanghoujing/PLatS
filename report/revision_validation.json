@@ -1,0 +1,79 @@
+{
+  "status": "passed",
+  "created_utc": "2026-10-02T15:31:55.259064+00:00",
+  "base_commit": "0f132ce9788b003dbb6e99daa1ddf6f83f1a6382",
+  "pages": {
+    "main": 5,
+    "references": 1,
+    "supplementary": 9,
+    "total": 15
+  },
+  "scope": "CVPR writing and PDF revision; no new training or benchmark evaluation.",
+  "checks": {
+    "latex_errors": 0,
+    "undefined_references": 0,
+    "overfull_boxes": 0,
+    "main_prompt_rows_match_supplementary": true,
+    "original_tables_and_measurements_unchanged": true,
+    "experimental_images_unchanged": true,
+    "model_sources_and_configs_unchanged": true,
+    "syntax_and_tex_labels": "passed",
+    "rendered_pages_reviewed": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      9,
+      10
+    ]
+  },
+  "technical_correction_sources": [
+    {
+      "path": "/home/x/Project/vesuvius_p2sd_wt0075/runs/0076_p2sd_meshmix_holdout96_vertex_warm0058_s85k/resolved_config.yaml",
+      "sha256": "cb4820a329dead12a92497d700e2116dedb47cf36b1595a65f835af86000b6ef",
+      "coordinate_query_enabled": false,
+      "gt_distance_weight": 0.15,
+      "crop_stage": "second_last"
+    },
+    {
+      "path": "/home/x/Project/vesuvius_p2sd/runs_from_260914/training/01_p2sd_0076_geocons_100k_gpu2/resolved_config.yaml",
+      "sha256": "5d599ca282a5845700d6eccbcff583a0abea8e7e4b931053d939347be232bf79",
+      "coordinate_query_enabled": false,
+      "gt_distance_weight": 0.15,
+      "crop_stage": "second_last"
+    }
+  ],
+  "related_work_sources_checked": [
+    "https://arxiv.org/abs/1705.08302",
+    "https://arxiv.org/abs/1812.03320",
+    "https://arxiv.org/abs/2406.17741",
+    "https://arxiv.org/abs/2211.15272"
+  ],
+  "unmeasured_extensions": [
+    "New scratch recipe accuracy",
+    "AE flip/rotation consistency"
+  ],
+  "existing_bibliography_warnings": [
+    "Missing year: scrollfiesta",
+    "Missing year: scrollprizeink"
+  ],
+  "files_sha256": {
+    "README.md": "e333c25d8207a26af70e5a5ee97df48a8a32e93d45509a5f21d2a1521760d0c5",
+    "build_paper_figures.py": "141fed71f95133910971cabb9082ffdcf6c20b2dc4ccd8e07a289092df167c8c",
+    "figures/training.pdf": "fa47f5e290f52656fa2ced34fa6cc99b84918e80b3b09f13b40d913b0894abb5",
+    "figures/training.png": "f45924f39ff2a282dc15a7e057a5bf045a99822f125ddfdb7904ba629f02b233",
+    "index.html": "4465376040fdac1ca7bb2afbc1129d265cb4c1e116eb44b79cdd562d81c91fb5",
+    "report.pdf": "4e0cd32150359337b79a6729edbdf7b7250e8bd9a24dcbf99fc35525b1f72fb3",
+    "report.tex": "51e15bbe0a349c534dfca09b78ebfac3828002905e1ec96840d782317b55ee98",
+    "sections/abstract.tex": "ff32ca19c1d706db3298f7e616afe604c2f5cd2f9771de25a68e873483b24d2a",
+    "sections/architecture.tex": "46e62e332ea3170c12e16939bd53c03345c2f44c483e13e15195c117de244a23",
+    "sections/discussion.tex": "3f3aca9673adcb282c84a76de0da8a746468f657bd1c8f3283ca6e04869dd8f8",
+    "sections/experiments.tex": "546e6c346f7de9cfb939e0b93ba3add0f67949bf4c34827ee2b1e9896f3fee05",
+    "sections/introduction.tex": "ae47903a353bf05e4d7f7f125b79d72bd2ac576a7097ba2fd069e6bf0eb76f50",
+    "sections/method.tex": "0e4e868f635772f82536230261aeb8b96c79702740ea313d19d5f3ab99419d39",
+    "sections/query_extensions.tex": "f619d1fa373131dd351b76d8ce53885af4054b5923d07172dba998f1271e3a78",
+    "sections/supplementary.tex": "61e254e0321e6acd3d35a2d68935671db175dec461612a580169df3fcd6d65b9",
+    "tables/prompt_main.tex": "415edbe5754091fa4e9865ed09f3f70db26278f80cd9e9c4fd4b121dee996493"
+  }
+}

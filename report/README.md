@@ -4,23 +4,27 @@
 
 Houjing Huang · houjing.huang@gmail.com
 
-Open [report.pdf](report.pdf). The main paper presents the sheet representation,
-point-conditioned latent prediction, automatic segmentation and experiments.
+Open [report.pdf](report.pdf). The main paper develops one idea: a compact
+sheet code for both reconstruction and instance discovery. It includes related
+work, automatic segmentation, experiments and remaining evidence gaps.
 Exact objectives, module connections and secondary experiments follow in the
 same PDF as Supplementary Material. FFN comparisons are excluded from this draft.
 
 ## Edit and build
 
-Edit `sections/method.tex`, `sections/experiments.tex` and `sections/abstract.tex`
-for the main paper. Supplementary source is `sections/supplementary.tex`, with
+Edit `sections/abstract.tex`, `sections/introduction.tex`, `sections/method.tex`,
+`sections/experiments.tex` and `sections/discussion.tex` for the main paper. Supplementary source is `sections/supplementary.tex`, with
 `sections/model_details.tex` for objectives and `sections/architecture.tex` for
-module connections and efficiency. Main experiments use the Kaggle-only model;
+module connections and efficiency. `sections/query_extensions.tex` describes
+retained query supervision and the unevaluated AE-consistency proposal.
+Main experiments use the Kaggle-only model;
 extra-data checkpoints remain supplementary.
 
 The new module figures are reproducible without datasets, model weights or a GPU:
 
 ```bash
 python report/build_architecture_figures.py
+python -c "from report.build_paper_figures import architecture; architecture(include_inference=False)"
 cd report
 latexmk -pdf report.tex
 ```
@@ -36,7 +40,8 @@ refiner, prediction heads, binary branch and attached losses. The binary branch
 has **no encoder–decoder skip connections**; this corrects the earlier prose.
 The final prediction head is distinct from the auxiliary projections.
 The [new training recipe diagram](figures/p2sd_training_recipe.png) shows
-late binary cropping; the paper figure labels the historical reference recipe.
+late binary cropping and is included in the PDF. The historical reference
+diagram remains available separately; benchmark settings are explicitly distinguished.
 
 The efficiency discussion distinguishes tensor sizes from runtime: 1,000 latent
 sites, 64,000 code scalars, shared CT context, and full decoding only when needed.
@@ -52,6 +57,10 @@ is historical, not a certification of every later prose/layout edit. Branch
 validation for the initial cleanup is in
 `../provenance/make_idea_clear_validation.json`; the later recipe/inference
 checks are in `../provenance/late_crop_joint_inference_validation.json`.
+The current CVPR writing/PDF revision is audited in `revision_validation.json`.
+This revision changes presentation and corrects the 0076 GT-query description;
+it adds no new training or evaluation results. Matched ablations, runtime
+measurements and spatially disjoint generalization remain open experiments.
 
 Tables cover all 106 released, previously inspected test cubes. Training IDs
 were excluded; this alone does not certify spatial independence. Ignore-mask

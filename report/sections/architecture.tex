@@ -51,22 +51,24 @@ own four attention blocks, and upsamples with residual/convolutional stages
 of channels $512,256,128,64,32,16$. A final $1\times1\times1$ head produces
 union logits. It has no encoder--decoder skip connections; residual
 connections inside individual blocks are distinct. Its loss updates the
-shared image encoder and image-context blocks. For the reference joint
-training recipe, refinement sees the complete $10^3$ context, then a $5^3$
-context crop is decoded to $160^3$ for ignore-masked binary supervision.
-The new from-scratch recipe instead uses late cropping: decode the full
-$160^3$ intermediate feature grid, crop $80^3$ features, then apply the final
-upsampling stage and head to obtain $160^3$ output supervision. This preserves
-full-volume context in earlier stages, at increased activation-memory cost.
-This recipe change is not retroactively attributed to the scored reference.
+shared image encoder and image-context blocks. In the new training recipe,
+refinement sees the complete $10^3$ context and decoding builds the full
+$160^3$ intermediate feature grid. We crop $80^3$ features there and apply
+the final $\times2$ upsampling, residual block and occupancy head to obtain
+$160^3$ output supervision. Earlier stages retain full-volume context at
+increased activation-memory cost. This is the retained \texttt{second\_last}
+crop mode, also used by 0076. The scored 0058 checkpoint instead used an
+earlier $5^3$ context crop; its measurements are unchanged.
 
 \begin{figure*}[t]
- \centering\includegraphics[width=\textwidth]{figures/p2sd_modules.pdf}
- \caption{\textbf{P2SD module connections.} CT encoding and context attention
- are shared across prompt groups. Prompt composition, modulation and refinement
- predict compact sheet codes. The teacher AE is frozen. The auxiliary binary
- branch shares unprompted context; the frozen sheet decoder is needed only
- for inference and validation under the main latent training objective.}
+ \centering\includegraphics[width=\textwidth]{figures/p2sd_training_recipe.pdf}
+ \caption{\textbf{P2SD modules in the new training recipe.} Shared CT encoding
+ and context feed prompt composition, modulation and refinement. Code heads
+ learn from the frozen AE. The binary branch decodes full context to $160^3$
+ features before cropping for its final upsampling; at inference it decodes
+ the full union for seed proposal. The sheet decoder is used only when masks
+ are needed under the main latent objective. Optional query losses are
+ described separately; the scored 0058 checkpoint used earlier cropping.}
  \label{fig:p2sd_modules}
 \end{figure*}
 
@@ -83,18 +85,18 @@ Let $N$ be the number of foreground seeds, $G$ the number of additional
 multi-point prompt groups used for cluster consistency, and $K$ the number
 of sheet hypotheses that are densely decoded. Let $C_{\rm img}$ denote
 shared CT encoding/context cost, $C_{\rm code}$ the cost per prompt group,
-$C_{\rm cluster}$ clustering cost, and $C_D$ one AE decoding cost. The
-prompted portion of automatic inference has approximate cost
+$C_{\rm cluster}$ clustering cost, $C_B$ the binary branch's refinement and
+union decoding cost, and $C_D$ one AE decoding cost. With the co-trained
+proposal head, automatic inference has approximate cost
 \begin{equation}
- C_{\rm img}+(N+G)C_{\rm code}+C_{\rm cluster}+K C_D.
+ C_{\rm img}+C_B+(N+G)C_{\rm code}+C_{\rm cluster}+K C_D.
 \end{equation}
 This avoids paying a full upsampling cost for each of the $N$ seed codes
 before clustering. Retained sheets still require dense decoding, output
-storage and cleanup. The released foreground proposer is a separate model
-with its own encoding and full-resolution union decode, adding further cost.
-The new recipe instead uses its co-trained binary head and reuses the same
-cached image context for seed proposal and P2SD. It still incurs one
-full-resolution union decode; it avoids the separate proposer's CT encoding.
+storage and cleanup. The co-trained proposal head reuses the cached image
+context and incurs one full-resolution union decode. The historical benchmark
+instead uses a separate proposer with its own CT encoder, so its cost includes
+an additional encoding. No binary training crop is applied at inference.
 
 During P2SD training, the frozen teacher encoder produces sheet targets, but
 the active latent objective does not require AE decoding. The auxiliary

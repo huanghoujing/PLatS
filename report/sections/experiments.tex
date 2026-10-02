@@ -6,7 +6,9 @@ We use Kaggle-only checkpoint \textbf{0058} for the main comparisons and
 evaluate all \textbf{106 released test cubes}. Training-case IDs are excluded,
 but labels are now public and some crops were previously inspected; this is
 not a fresh blind submission. External-data checkpoints, training details and
-all 1/2/4/8-point results are in Supplementary.
+all 1/2/4/8-point results are in Supplementary. We evaluate automatic union
+quality, ignore-erasure sensitivity, prompted geometry and identity, then
+downstream surfaces. The new scratch recipe has no accuracy results yet.
 
 \subsection{Binary segmentation and topology}
 We first apply the original leaderboard protocol: erase source-ignore voxels
@@ -23,13 +25,11 @@ using no GT prompts and equal weight per cube.
 
 \input{tables/standard_lb}
 
-The winner achieves the higher combined score, but can connect distinct
-sheets (Fig.~\ref{fig:binary}, top). PLatS separates layers in this example
-while missing some bands. As a separate shape diagnostic, 87.3\% of 764
-\emph{GT-prompted}, eight-point sheet predictions have one component and no
-tunnels or cavities before cleanup. Single-point codes attain 0.912 AUROC
-for distinguishing same-sheet from different-sheet pairs. These results
-support the representation; they do not guarantee correct instance discovery.
+The winner achieves the higher combined score (0.6176 versus 0.5305) and
+higher Dice. Its binary mask can still connect distinct sheets
+(Fig.~\ref{fig:binary}, top). PLatS separates layers in this example while
+missing bands. Thus the example illustrates a topology failure mode, while
+the full benchmark identifies coverage and geometric accuracy as limitations.
 
 \begin{figure*}[!t]
  \centering
@@ -68,15 +68,38 @@ can still incur penalties. The exact rule and filtering controls are in
 Supplementary.
 
 \input{tables/modified_lb}
-The winner still has the higher combined score; restoration reveals sensitivity
-to ignore cuts rather than establishing a new ranking.
+The winner still has the higher combined score (0.6537 versus 0.6124).
+PLatS has the higher restored topology term (0.5820 versus 0.5694), but lower
+surface and VOI scores. Restoration therefore diagnoses erasure sensitivity;
+it does not establish a new challenge ranking.
+
+\subsection{Sheet geometry and latent identity}
+To separate representation quality from automatic seed selection, we use
+nested GT prompts on 764 eligible annotated bands. Before cleanup or ignore
+erasure, 87.3\% of eight-point predictions have one component and no tunnels
+or cavities. This is a topology statistic, not a geometric correctness rate.
+Table~\ref{tab:promptmain} measures alignment: increasing prompts from one to
+eight raises Surface Dice from 0.7689 to 0.8058, while voxel Dice remains modest.
+GT components and repaired training targets favor simple sheet topology.
+
+\input{tables/prompt_main}
+
+For 6,112 single-point codes, same-band versus different-band classification
+has 0.9121 AUROC. The distributions overlap: at the inherited MSE threshold
+0.02, 50.03\% of same-band pairs exceed it. Automatic instance accuracy,
+TP/(TP+FP+FN), is 0.420 at IoU 0.25 but only 0.071 at IoU 0.50.
+Useful code separation therefore coexists with clustering and alignment errors.
+Supplementary reports complete prompt counts, instance diagnostics and raw
+topology; none is a causal ablation of the AE or identity losses.
 
 \subsection{From sheets to ink}
-We independently mesh and flatten predictions, then apply the same frozen
-ink model~\cite{scrollfiesta,rabinovich2017slim,scrollprizeink}.
-Figure~\ref{fig:largeink} shows two PHerc0139 regions, approximately
-$20\times33$ and $23\times44$~mm. Each starts from one published-track point;
-later prompts come from predictions. No reference layout or ink labels enter
-reconstruction or rendering. The pages test stitching across many crops:
-visible gaps and diffuse ink remain, and no transcription accuracy or newly
-recovered text is claimed. The ink model's training includes this scroll.
+Predictions are meshed, independently flattened, and passed to a frozen ink
+model~\cite{scrollfiesta,rabinovich2017slim,scrollprizeink}.
+Figure~\ref{fig:largeink} shows two PHerc0139 regions of approximately
+$20\times33$ and $23\times44$~mm. Each begins with one published-track point
+and grows using predicted points; reference layouts and ink labels are
+excluded from reconstruction. Median accepted join distances are 1.181 and
+1.361 voxels, versus reference-distance p90 values of 15.856 and 15.234 voxels:
+local continuity does not ensure global alignment. Page A covers 17.37\% of
+annotated pixels. Gaps and diffuse ink remain. These outputs demonstrate the
+pipeline, not new text recovery; the ink model's training includes this scroll.

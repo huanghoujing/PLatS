@@ -1,0 +1,42 @@
+\subsection{Retained query supervision}
+\label{supp:query}
+An optional P2SD-owned distance head $h_\theta$ supplies geometric supervision
+without full sheet decoding. It concatenates a trilinear sample of the raw
+predicted code $\widehat z_i=\mu+\sigma\odot\widehat{\bar z}_i$ with normalized
+query coordinates $q$, and applies a width-128 MLP. Its direct GT loss is
+\begin{equation}
+ \mathcal L_{\rm query}^{\rm GT}
+ =\mathbb E_q\,\mathcal H(h_\theta(\widehat z_i,q),d_i(q)).
+ \label{eq:gtquery}
+\end{equation}
+Here $\theta$ denotes the trainable query-head parameters, $\mathcal H$ is
+Smooth L1, and $d_i(q)$ is the clipped, normalized GT distance defined above.
+The optional term updates both the head and the predicted code. Direct GT
+targets avoid inheriting errors from the AE query head. A separate retained
+distillation option uses frozen-AE query predictions as targets instead.
+
+The P2SD-owned head currently predicts distance only. Query occupancy/distance
+heads and GT-target utilities remain available in the implicit AE path; a
+separate GT-supervised P2SD occupancy-query head is not wired in this release.
+These optional paths are preserved for experiments, not included in the
+0058 objective or enabled by the new default scratch recipe.
+
+\subsection{AE flip/rotation consistency: proposed extension}
+\label{supp:aeconsistency}
+The same geometric idea used in the P2SD continuation can be applied to the
+AE, but this extension is \emph{not implemented or evaluated here}. Define
+$\mathcal A=\sigmoid\circ D\circ E$ with latent noise disabled during the
+consistency passes. For an exact flip or right-angle rotation $g$, a candidate
+output-space objective is
+\begin{equation}
+ \mathcal L_{\rm AE\text{-}eq}
+ =\mse\bigl(\mathcal A(g\widetilde S),g\mathcal A(\widetilde S)\bigr).
+ \label{eq:aeequivariance}
+\end{equation}
+$\widetilde S$ is one corrupted sheet; $g$ transforms both the input and output
+voxel grids, and MSE averages over output voxels. Both branches use the same
+transformed corruption and retain supervision by the corresponding clean
+GT masks. A small weight after reconstruction stabilizes, applied periodically,
+would limit the additional decoder cost. This does not assume equivariance of
+the latent channels. A retrained AE would require fresh latent statistics
+and P2SD training against its updated codes.
