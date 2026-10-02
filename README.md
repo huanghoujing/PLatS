@@ -64,6 +64,24 @@ probabilities, and runtime/weight provenance. The mask is raw: no component clea
 The example is the first eligible sheet from the frozen case-00860 evaluation,
 not a best-performing sheet. Saved expected outputs expose its reconstruction errors.
 
+## Interactive inference over SSH
+
+[Launch the browser viewer](docs/INTERACTIVE_INFERENCE.md) for three linked
+orthogonal CT slices, click-to-prompt sheet decoding, and rotatable 3D surfaces.
+The GPU server caches CT features across clicks. Separate colored sheets,
+reference contours, and NIFTI export are included.
+
+```bash
+python viewer.py --image examples/sample_00860/image.npy \
+  --gt examples/sample_00860/gt_instances.npy --device cuda:0 --port 8787
+# On your local computer:
+ssh -N -L 8787:127.0.0.1:8787 USER@SERVER
+```
+
+Open the complete localhost URL printed by the server, including its `#token`.
+Use `--bundle-root /path/to/extracted/PLatS` when the released weights are outside
+this checkout. Inputs are preprocessed uint8 crops of at most 320³ voxels.
+
 ## Discover instances automatically
 
 ```bash

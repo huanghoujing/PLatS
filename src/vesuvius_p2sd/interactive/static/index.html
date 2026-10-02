@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>PLatS · Interactive sheets</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script type="importmap">
+      { "imports": { "three": "/vendor/three/three.module.min.js" } }
+    </script>
+  </head>
+  <body>
+    <header>
+      <div class="brand">PLatS <span>Interactive sheets</span></div>
+      <div id="status" role="status">Connecting…</div>
+      <button id="export">Export NIFTIs</button>
+    </header>
+    <main>
+      <aside>
+        <section>
+          <h2>CT crop</h2>
+          <div id="crop-name" class="filename"></div>
+          <div id="crop-info" class="subtle"></div>
+          <details>
+            <summary>Open another crop</summary>
+            <label
+              >Image path on server<input
+                id="image-path"
+                type="text"
+                placeholder="/path/to/image.npy" /></label
+            ><label
+              >Reference path (optional)<input
+                id="gt-path"
+                type="text"
+                placeholder="/path/to/gt.nii.gz" /></label
+            ><button id="load">Open crop</button>
+          </details>
+        </section>
+        <section>
+          <div class="section-heading">
+            <h2>Sheets</h2>
+            <button id="new-sheet" title="Start another sheet (N)">+ New</button>
+          </div>
+          <div id="sheets"></div>
+          <div class="button-row">
+            <button id="undo" title="Remove last prompt (Backspace)">Undo point</button
+            ><button id="clear">Clear sheet</button>
+          </div>
+          <div id="point-count" class="subtle">0 / 8 positive points</div>
+          <ol id="points"></ol>
+          <button id="decode" class="primary">Decode sheet <kbd>Enter</kbd></button
+          ><label class="check"
+            ><input id="auto" type="checkbox" checked /> Decode after each click</label
+          >
+          <div id="timing" class="subtle"></div>
+        </section>
+        <section>
+          <h2>Display</h2>
+          <label>CT window <span id="window-value"></span></label>
+          <div class="range-pair">
+            <input
+              id="low"
+              aria-label="CT window lower bound"
+              type="range"
+              min="0"
+              max="254"
+              value="0"
+            /><input
+              id="high"
+              aria-label="CT window upper bound"
+              type="range"
+              min="1"
+              max="255"
+              value="255"
+            />
+          </div>
+          <label for="threshold"
+            >Active sheet threshold <span id="threshold-value">0.50</span></label
+          ><input id="threshold" type="range" min="0.05" max="0.95" step="0.05" value="0.5" />
+          <label for="opacity">Prediction overlay <span id="opacity-value">45%</span></label
+          ><input id="opacity" type="range" min="0" max="0.9" step="0.05" value="0.45" />
+          <label class="check"
+            ><input id="show-gt" type="checkbox" /> Reference contours <i class="gt-swatch"></i
+          ></label>
+          <label class="check"><input id="planes" type="checkbox" checked /> CT planes in 3D</label>
+          <label class="check"
+            ><input id="surfaces" type="checkbox" checked /> Predicted surfaces in 3D</label
+          >
+          <button id="reset-camera">Reset 3D view</button>
+        </section>
+        <section class="help">
+          <h2>Controls</h2>
+          <p>
+            <strong>Click</strong> a sheet to add a positive point. Keep one sheet per prompt group.
+          </p>
+          <p>
+            <strong>Shift-click</strong> moves the crosshair. <strong>Wheel</strong> scrolls slices.
+            Slice sliders work independently.
+          </p>
+          <p><strong>3D:</strong> drag to rotate, right-drag to pan, wheel to zoom.</p>
+          <p>
+            Only points on the exact displayed plane are drawn. Coordinates follow the input array
+            axes; no mirroring or reorientation is applied.
+          </p>
+        </section>
+      </aside>
+      <div class="workspace">
+        <article class="panel" id="panel-0">
+          <div class="panel-title">
+            <h2>Axis 0</h2>
+            <output id="slice-value-0"></output>
+          </div>
+          <canvas id="slice-0" aria-label="Axis 0 slice: click to prompt"></canvas>
+          <div class="slice-control">
+            <span>1 ↓ · 2 →</span
+            ><input id="slider-0" aria-label="Axis 0 slice" type="range" min="0" value="0" />
+          </div>
+        </article>
+        <article class="panel" id="panel-1">
+          <div class="panel-title">
+            <h2>Axis 1</h2>
+            <output id="slice-value-1"></output>
+          </div>
+          <canvas id="slice-1" aria-label="Axis 1 slice: click to prompt"></canvas>
+          <div class="slice-control">
+            <span>0 ↓ · 2 →</span
+            ><input id="slider-1" aria-label="Axis 1 slice" type="range" min="0" value="0" />
+          </div>
+        </article>
+        <article class="panel" id="panel-2">
+          <div class="panel-title">
+            <h2>Axis 2</h2>
+            <output id="slice-value-2"></output>
+          </div>
+          <canvas id="slice-2" aria-label="Axis 2 slice: click to prompt"></canvas>
+          <div class="slice-control">
+            <span>1 ↓ · 0 →</span
+            ><input id="slider-2" aria-label="Axis 2 slice" type="range" min="0" value="0" />
+          </div>
+        </article>
+        <article class="panel" id="panel-3">
+          <div class="panel-title">
+            <h2>3D surfaces</h2>
+            <span class="subtle">Native voxel coordinates</span>
+          </div>
+          <div id="scene"></div>
+          <div class="scene-caption" id="mesh-info">Add a prompt to reconstruct a sheet</div>
+        </article>
+      </div>
+    </main>
+    <div id="notice" role="alert" hidden></div>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

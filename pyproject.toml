@@ -10,3 +10,6 @@ requires-python = ">=3.10"
 authors = [{name = "Houjing Huang", email = "houjing.huang@gmail.com"}]
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"vesuvius_p2sd.interactive" = ["static/*", "static/vendor/three/*"]

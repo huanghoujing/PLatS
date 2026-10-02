@@ -17,3 +17,9 @@ the original LICENSE. The compact/binary patches are in `provenance/`.
 The report credits ScrollFiesta, SLIM, the frozen ScrollPrize ink model, and the
 Kaggle winner. Their model weights or full repositories are not part of this
 bundle. Saved CT/ink PNGs are experiment outputs, not verified transcriptions.
+
+## Interactive viewer
+
+The browser viewer vendors unmodified three.js r180 (0.180.0) assets under the
+MIT License. The upstream license and source information are included in
+`src/vesuvius_p2sd/interactive/static/vendor/three/`.
