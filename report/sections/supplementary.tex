@@ -59,27 +59,45 @@ labels. Training-ID exclusion alone does not certify spatial disjointness.
 Cached CT inputs share five-voxel image-border zeroing; GT borders are retained.
 
 \section{Automatic clustering and instance diagnostics}
-\paragraph{Figure~\ref{fig:inference}: measured inference panels.}
-We reuse case 00860 and its central native $z=160$ section, as in the binary
-failure example. The frozen automatic run provides all 512 seed coordinates
-and final instances. A replay with the same 0058 checkpoint, BF16 precision
-and seed batch size 32 captures the 64,000-dimensional point codes; retained
-cluster sizes match the saved log. Seeds, PCA points and output masks share
-one palette indexed by final predicted instance IDs. Seed colors are applied
-after inference for display, not supplied to the model. Multiple retained
-clusters can share a final ID after duplicate handling; gray indicates a
-discarded hypothesis. Seed markers use the $z\pm12$ slab, while CT and mask
-images use the exact central plane. Deterministic PCA explains 27.8\% of the
-code variance and is only a display; clustering uses the complete codes.
+\paragraph{Figures~\ref{fig:ae}--\ref{fig:training}: real model examples.}
+All image panels use case 00860 at native $z=160$. The AE input, output and
+target show the identical $160\times160$ crop ($x=80{:}240$, $y=40{:}200$)
+of annotated band 9. Corruption follows the original AE training recipe with
+torch seed 42; occupancy is displayed at threshold 0.5 without cleanup.
+Dense distance panels share the training scale: distance clipped at 16 voxels
+and divided by 16. Coordinate-query supervision samples that same 3D target.
+The two-sheet example encodes clean bands 9 and 8; their cosine is 0.332.
+This is an illustration, not a separation benchmark or causal ablation.
+Code glyphs denote whole tensors; they are not feature-intensity measurements.
 
-The distance panel replaces feature-intensity visualization with measured
-identity separation. It uses all 21,392 same-band and 184,128 different-band
-pairs from the fixed GT-prompt analysis below, independently of the automatic
-cluster assignments. Curves are empirical cumulative distributions, normalized
-separately and displayed over a common logarithmic MSE axis. Their grayscale
-line styles denote pair classes, not the instance palette used in the other
-panels. The saved distance matrices reproduce the reported pair counts,
-quantiles and AUROC; no new threshold or model is fitted for the figure.
+The prompted path uses the frozen eight-point manifest for band 9 and checkpoint
+0058. CT and output show the full native plane; only prompts within $z\pm12$
+are overlaid as hollow off-plane markers (their exact $z$ values are 153 and
+151). All eight 3D prompts are used for prediction. The depicted binary decoder
+contains residual blocks but has no encoder--decoder skip connections.
+Intermediate code heads and identity losses are defined above; the overview
+emphasizes the target/prediction MSE and the separate inference-only decode.
+
+\paragraph{Figure~\ref{fig:inference}: measured automatic clustering.}
+The same example supplies all 512 automatic seeds and final instances. The
+saved codes retain all 64,000 dimensions. Reapplying the original leader
+clustering threshold reproduces every final seed assignment and all 18 retained
+cluster sizes. Of 112 initial clusters, 94 contain at most eight points and
+are excluded: 230 seeds remain and 282 are discarded. Duplicate handling maps
+the 18 retained clusters to 14 final IDs. Matrix rows and columns are ordered
+by final ID and then leader-cluster ID, with discarded clusters last. Colored
+strips denote final IDs; gray denotes discarded points. White outlines bound
+retained clusters, and cyan lines divide retained from discarded seeds.
+
+Distances are full-code MSE, computed in double precision from the saved codes;
+the logarithmic display floors values below $10^{-5}$ only for coloring. The
+matrix visualizes relationships, while assignment uses distance to a running
+cluster centroid. CT seed markers use the explicitly labeled $z=148{:}172$
+slab: filled markers lie on $z=160$, hollow markers lie off-plane. The CT and
+decoded-mask panels use the exact $z=160$ section. Seed colors are assigned
+after inference for display, never supplied to the model. Within each retained
+cluster, multi-point prompt subsets use the cached CT context to predict codes;
+consistent subset codes are combined before decoding and cleanup.
 
 \paragraph{Measured latent identity separation.}
 Each of the eight fixed GT coordinates per band is queried separately, yielding

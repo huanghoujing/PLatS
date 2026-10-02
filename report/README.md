@@ -20,11 +20,10 @@ retained query supervision and the unevaluated AE-consistency proposal.
 Main experiments use the Kaggle-only model;
 extra-data checkpoints remain supplementary.
 
-The new module figures are reproducible without datasets, model weights or a GPU:
+The detailed supplementary module figures need no datasets, weights or GPU:
 
 ```bash
 python report/build_architecture_figures.py
-python report/build_method_figures.py --training_only
 cd report
 latexmk -pdf report.tex
 ```
@@ -60,8 +59,8 @@ checks are in `../provenance/late_crop_joint_inference_validation.json`.
 The initial CVPR writing revision is audited in `revision_validation.json`.
 It changes presentation and corrects the 0076 GT-query description.
 The raw-prediction Betti table was checked in
-`raw_prediction_betti_validation.json`. The current method/figure revision
-is checked in `method_clarity_validation.json`. Matched ablations, runtime
+`raw_prediction_betti_validation.json`. The previous method revision is checked in `method_clarity_validation.json`.
+The current three-figure redesign is checked in `three_figures_validation.json`. Matched ablations, runtime
 measurements and spatially disjoint generalization remain open experiments.
 
 Tables cover all 106 released, previously inspected test cubes. Training IDs
@@ -104,24 +103,31 @@ The script verifies input hashes and native shapes, and checks agreement with
 the previous raw audit. It needs NumPy/SciPy and the repository source; no GPU,
 model inference or exact feature matching is needed for these whole-mask counts.
 
-## Two training stages and measured inference
+## Three main method figures
 
-The main method defines the sheet AE, point-to-latent prediction and automatic
-clustering/decoding in that order. Essential heads, losses, notation and frozen
-modules stay in the main paper; dimensions, weights and sampling remain in the
-supplement. Figure 1 combines the two training stages. Figure 2 uses actual
-seeds, independently labeled same/different-sheet distance distributions, code
-clusters and decoded sheets. Predicted instance colors match across the seed,
-cluster and sheet panels; the distance analysis uses GT identities across 106
-crops and is explicitly distinguished from that automatic example.
+The main method still follows AE training, point-to-latent training and automatic
+clustering/decoding. The three figures now explain these stages separately:
 
-Rebuild both main figures from the saved research arrays:
+- [Sheet representation](figures/sheet_representation.png): matched corrupted,
+  reconstructed and clean mask slices, explicit supervised heads, and a measured
+  two-sheet code-repulsion example.
+- [Point-to-latent prediction](figures/point_to_latent.png): aligned target and
+  predicted codes with their MSE, a shared binary branch, and an inference-only
+  frozen sheet decoder. The binary branch has residual blocks, not encoder-to-decoder skips.
+- [Automatic discovery](figures/automatic_discovery.png): all 512 full-code
+  distances, cluster boundaries and excluded seeds, colored seed groups on CT,
+  and decoded sheets. Off-plane markers are explicitly distinguished.
+
+The main figures use actual outputs from the existing research runs. Rebuild
+the local capture on an available GPU, then render without further inference:
 
 ```bash
-python report/build_method_figures.py --research_root /path/to/research/workspace
+CUDA_VISIBLE_DEVICES=0 python report/capture_method_figure_data.py --research_root /path/to/research/workspace
+python report/build_explanatory_method_figures.py --research_root /path/to/research/workspace
 ```
 
-The builder checks measured pair counts, quantiles and AUROC against the frozen
-result snapshot. It writes rendered figures only; source per-case arrays remain
-in the research workspace. Earlier main-diagram assets and experimental audits
-are retained as historical records.
+The original research checkpoints and arrays must be present. The capture is
+saved under `runs_from_260914/evaluation/11_paper_three_method_figures/` in that
+workspace. Source arrays stay local; rendered PDF/PNG/SVG assets and their
+builders accompany the paper. This revision does not change benchmark results.
+Earlier figure assets and audits remain historical records.

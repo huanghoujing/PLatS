@@ -2,18 +2,18 @@
 \label{sec:method}
 
 \begin{figure*}[t]
- \centering\includegraphics[width=\textwidth]{figures/training_overview.pdf}
- \caption{\textbf{Two training stages, one sheet representation.}
- (a) Train the sheet AE with occupancy, distance and regularization losses.
- (b) Freeze the AE and predict its normalized code from CT and points.
- The binary branch supervises shared CT features; sheet decoding is deferred
- until masks are needed. Blue modules are trainable in the displayed stage;
- gray modules are frozen. $\mathcal N$ denotes fixed code normalization.}
- \label{fig:trainingoverview}\label{fig:ae}\label{fig:training}
+ \centering\includegraphics[width=\textwidth]{figures/sheet_representation.pdf}
+ \caption{\textbf{Learning the sheet representation.} Actual corrupted input,
+ reconstruction and clean target use matched slices. Occupancy and distance
+ predictions connect to their losses and clean targets; the query head uses
+ the same distance target at coordinate $q$. The prominent code is the only
+ path through the AE. Below, two real sheets illustrate cosine-margin code
+ repulsion (measured cosine 0.332). Masks are displayed at threshold 0.5.}
+ \label{fig:ae}
 \end{figure*}
 
 PLatS learns a sheet representation, then learns to predict it from CT and
-points (Fig.~\ref{fig:trainingoverview}). At inference, the same representation
+points (Figs.~\ref{fig:ae}--\ref{fig:training}). At inference, the same representation
 groups foreground seeds and reconstructs individual sheets.
 
 \subsection{Stage 1: learn the sheet AE}
@@ -37,6 +37,18 @@ codes of different sheets; spatial penalties suppress foreground outside the
 sheet and at the crop border. All AE modules train in this stage and are
 then frozen. The bottleneck \emph{empirically favors valid sheet topology},
 without a mathematical guarantee or an explicit topology loss.
+
+\begin{figure*}[t]
+ \centering\includegraphics[width=\textwidth]{figures/point_to_latent.pdf}
+ \caption{\textbf{Predicting the sheet code.} Aligned teacher and CT/prompt
+ paths produce the normalized target $\bar z$ and prediction
+ $\hat{\bar z}$, with MSE directly between them. Shared CT features also
+ supervise the binary decoder against the GT union. Blue modules train;
+ purple dashed modules are frozen, white panels are data, green objects are
+ codes/features, and gold denotes losses. Sheet decoding is an inference-only
+ extension. The shown eight-point prediction uses the displayed CT crop.}
+ \label{fig:training}
+\end{figure*}
 
 \subsection{Stage 2: learn point-to-latent prediction}
 For CT crop $X$ and positive point set $P$, the image encoder and context
@@ -77,14 +89,13 @@ a mask for every seed (Fig.~\ref{fig:inference}). Dimensions, loss weights,
 sampling and cleanup are detailed in Supplementary.
 
 \begin{figure*}[t]
- \centering\includegraphics[width=\textwidth]{figures/inference_relationships.pdf}
- \caption{\textbf{Measured latent relationships and automatic instances.}
- (a,c,d) Automatic seeds, code clusters and decoded sheets in case 00860.
- Colors consistently identify the same final predicted instances; seed colors
- are assigned after clustering, and gray marks discarded seeds/codes.
- (b) Empirical cumulative distributions of full-code MSE for same-sheet and
- different-sheet pairs from the separate GT-prompt analysis over all 106 crops.
- This panel measures identity separation; it does not use clustering labels.
- The PCA panel is a display of the automatic codes, not the clustering metric.}
+ \centering\includegraphics[width=\textwidth]{figures/automatic_discovery.pdf}
+ \caption{\textbf{Automatic instance discovery.} The same CT features serve
+ single-seed codes and later multi-point predictions. The matrix shows measured
+ full-code MSE for all 512 seeds, ordered by final ID and retained cluster,
+ followed by discarded groups. White diagonal outlines mark retained clusters;
+ cyan dividers isolate discarded seeds. Clustering compares codes with running
+ centroids, not a PCA projection. Matching colors link groups on CT to decoded
+ sheets; hollow markers are off-plane within the labeled slab.}
  \label{fig:inference}
 \end{figure*}

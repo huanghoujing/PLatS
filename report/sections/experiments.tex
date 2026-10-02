@@ -1,4 +1,28 @@
 \section{Experiments}
+
+\begin{figure*}[!t]
+ \centering
+ \includegraphics[width=\textwidth]{figures/binary_failure_main.png}
+ \includegraphics[width=\textwidth]{figures/ignore_failure.png}
+ \caption{\textbf{Two different topology failures.}
+ Top: a winner component joins six annotated bands in case 00860 ($z=160$);
+ PLatS preserves gaps but misses bands. Colors are IDs within each method.
+ Bottom: ignore erasure cuts a predicted sheet in case 00829 ($z=95$).
+ Its whole-volume topology changes from one component and no tunnels to
+ 495 components and 1,023 tunnels. Restoring its own voxels reverses the cuts.
+ Orange marks removed voxels. Both rows use native $z$ slices; selection
+ rules and the enlarged orange-square crop are in Supplementary.}
+ \label{fig:binary}\label{fig:ignore}
+\end{figure*}
+
+\begin{figure*}[!t]
+ \centering\includegraphics[width=\textwidth]{figures/large_ink.png}
+ \caption{\textbf{Centimeter-scale surfaces and ink.} Independently flattened
+ CT texture and ink probabilities from PLatS on two PHerc0139 regions.
+ Darker ink pixels indicate higher probability. Whole charts expose gaps and
+ stitching limitations; native PNGs accompany the report.}
+ \label{fig:largeink}
+\end{figure*}
 \label{sec:experiments}
 
 \paragraph{Setup.}
@@ -34,29 +58,7 @@ higher Dice. Its binary mask can still connect distinct sheets
 missing bands. Thus the example illustrates a topology failure mode, while
 the full benchmark identifies coverage and geometric accuracy as limitations.
 
-\begin{figure*}[!t]
- \centering
- \includegraphics[width=\textwidth]{figures/binary_failure_main.png}
- \includegraphics[width=\textwidth]{figures/ignore_failure.png}
- \caption{\textbf{Two different topology failures.}
- Top: a winner component joins six annotated bands in case 00860 ($z=160$);
- PLatS preserves gaps but misses bands. Colors are IDs within each method.
- Bottom: ignore erasure cuts a predicted sheet in case 00829 ($z=95$).
- Its whole-volume topology changes from one component and no tunnels to
- 495 components and 1,023 tunnels. Restoring its own voxels reverses the cuts.
- Orange marks removed voxels. Both rows use native $z$ slices; selection
- rules and the enlarged orange-square crop are in Supplementary.}
- \label{fig:binary}\label{fig:ignore}
-\end{figure*}
 
-\begin{figure*}[!t]
- \centering\includegraphics[width=\textwidth]{figures/large_ink.png}
- \caption{\textbf{Centimeter-scale surfaces and ink.} Independently flattened
- CT texture and ink probabilities from PLatS on two PHerc0139 regions.
- Darker ink pixels indicate higher probability. Whole charts expose gaps and
- stitching limitations; native PNGs accompany the report.}
- \label{fig:largeink}
-\end{figure*}
 
 \subsection{Separating ignore cuts from model defects}
 Erasing ignored labels can create holes in an otherwise continuous prediction

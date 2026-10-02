@@ -1,0 +1,72 @@
+{
+  "status": "passed",
+  "created_utc": "2026-10-02T17:22:37.908099+00:00",
+  "base_commit": "8934220c200f4457fc9e25efb911cc634f04326e",
+  "scope": "Three method figures with real frozen-model examples; no training or benchmark changes.",
+  "pages": {
+    "main": 6,
+    "references": 1,
+    "supplementary": 10,
+    "total": 17
+  },
+  "figure_pages": {
+    "sheet_representation": 2,
+    "point_to_latent": 3,
+    "automatic_discovery": 3
+  },
+  "checks": {
+    "latex_errors": 0,
+    "undefined_references": 0,
+    "overfull_boxes": 0,
+    "method_figures_visually_reviewed_at_paper_size": true,
+    "tables_and_results_snapshot_unchanged": true,
+    "model_code_configs_weights_unchanged": true,
+    "AE_matched_slices_and_actual_corruption_verified": true,
+    "cluster_replay_matches_all_saved_seed_assignments": true,
+    "pair_matrix_matches_direct_full_code_MSE": true,
+    "discarded_seeds_preserved_in_matrix_and_slab_display": true,
+    "same_palette_for_clustered_seeds_and_decoded_instances": true,
+    "on_plane_and_off_plane_markers_distinguished": true,
+    "binary_decoder_connections_checked_against_implementation": true,
+    "training_decoder_separated_from_inference_extension": true,
+    "capture_help_and_script_syntax_checked": true
+  },
+  "illustrations": {
+    "AE_cosine_two_clean_sheet_codes": 0.33208978176116943,
+    "distance_matrix_shape": [
+      512,
+      512
+    ],
+    "leader_clusters": 112,
+    "retained_clusters": 18,
+    "final_ids": 14,
+    "retained_seeds": 230,
+    "discarded_seeds": 282,
+    "distance_metric": "MSE over all 64,000 code elements; no PCA",
+    "distance_display_floor": 1e-05,
+    "distance_display_scale": "logarithmic",
+    "binary_branch": "Residual blocks; no encoder-to-decoder skip connections.",
+    "new_accuracy_or_causal_claim": false
+  },
+  "source_arrays_remain_local": true,
+  "files_sha256": {
+    "README.md": "0fb3cc5cd8901182704f670de5f58240a17b4d9429dc62cede9347ee51498016",
+    "build_explanatory_method_figures.py": "c9cd596e760602bd596b4dbf32e4bd29ac4bd796935d60fad24306595cd59cb2",
+    "capture_method_figure_data.py": "050732f0ae88d9c2e0e2f8872b0accb625e8a2eb6bc9f4b5df7ff8e37f7e9637",
+    "figures/automatic_discovery.pdf": "ed0944b0d455fc9d30965f977d10141f29c41b28ec6773ef22f6d8bbfffe0983",
+    "figures/automatic_discovery.png": "52a808aeff293226dcaa6d60c59e177dd5c1ec915736df44556c6baa13365020",
+    "figures/automatic_discovery.svg": "1aeddf090cb33178e321ee770ae3ad028d4a2b148b148ef8ba1f8cf1be03840a",
+    "figures/point_to_latent.pdf": "23b6411dbf9a8a661d0f242c0e56c1e68cf4753f03c6c3aacefc206c71bac08d",
+    "figures/point_to_latent.png": "889b2d754af8bb4c432ed120d7d971ed245213f4f72d65ae471c5b7ade8e278b",
+    "figures/point_to_latent.svg": "69ded7025995039c578aae7aa3fe8ce43df8296dd04de4e727277728a94df179",
+    "figures/sheet_representation.pdf": "b0f4ae19137c559d600063b9e2bec4a22e228d3796f68d49d90f55f27d77f347",
+    "figures/sheet_representation.png": "6af8895f7ef7a5b898014d311074558400d00806a6819c60669220a4c8e2fc83",
+    "figures/sheet_representation.svg": "5a6066ea04ec4f3878e40317fec79a1e7cd0c1f92d5d159ee2d6af8ffc145773",
+    "index.html": "4e9a693cbfa9e19679edcbd1b2dc2b6f463ba7695a67c0ce0f2dcebe072075c9",
+    "report.pdf": "6e641d520484b3d440543e8cc43889ece3bef722456b0da614e9b00ff8e8cd58",
+    "sections/experiments.tex": "554693556303d15a60d6116a99117de4a261a32d676c97e3f37f8bbca2965d15",
+    "sections/method.tex": "24ef4cbc2da4624aa79d0493c5f5075e6836074599ceff83a2674790255ce290",
+    "sections/model_details.tex": "fc3a5771ac25ec363cf5287ebcb7a527756224161baebc73912cac12e94a6173",
+    "sections/supplementary.tex": "63c5f7dd49cf377e6cefeb9c499335a664eff35a444d8b32497d302e4c778522"
+  }
+}

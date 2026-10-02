@@ -11,7 +11,7 @@ its occupancy decoder $D$ predicts probability $Q_i$:
 Here $\sigmoid$ is the logistic function, $\odot$ is elementwise multiplication,
 and $\xi$ is independent uniform noise in $[-0.02,0.02]$ during AE training.
 At $320^3$ input, the code is $64\times10^3$. No encoder--decoder skip
-connections bypass it (Fig.~\ref{fig:trainingoverview}a). The other heads predict a dense
+connections bypass it (Fig.~\ref{fig:ae}). The other heads predict a dense
 unsigned distance field $U_i$, a distance $h(z_i,q)$ at query coordinate $q$,
 and four intermediate occupancy maps $Q_i^{(a)}$.
 
@@ -37,7 +37,7 @@ $\lambda$ symbols are loss weights, specified below. The sheet prior uses no exp
 The CT encoder $C$ produces a $512\times10^3$ grid and four context attention
 blocks. Each prompt token combines Fourier coordinates, trilinearly sampled
 CT features and its positive label. Prefix attention and four transformer
-blocks $T$ predict the normalized sheet code (Fig.~\ref{fig:trainingoverview}b):
+blocks $T$ predict the normalized sheet code (Fig.~\ref{fig:training}):
 \begin{align}
  \bar z_i&=(E(S_i)-\mu)/\sigma,\qquad
  \widehat{\bar z}_i=T(C(X),P_i),\nonumber\\
