@@ -79,7 +79,7 @@ Intermediate code heads and identity losses are defined above; the overview
 emphasizes the target/prediction MSE and the separate inference-only decode.
 
 \paragraph{Figure~\ref{fig:inference}: measured automatic clustering.}
-The same example supplies all 512 automatic seeds and final instances. The
+Row A uses the original 512 automatic seeds and final instances. The
 saved codes retain all 64,000 dimensions. Reapplying the original leader
 clustering threshold reproduces every final seed assignment and all 18 retained
 cluster sizes. Of 112 initial clusters, 94 contain at most eight points and
@@ -98,6 +98,18 @@ decoded-mask panels use the exact $z=160$ section. Seed colors are assigned
 after inference for display, never supplied to the model. Within each retained
 cluster, multi-point prompt subsets use the cached CT context to predict codes;
 consistent subset codes are combined before decoding and cleanup.
+
+\paragraph{Exact-plane seed example (Figure~\ref{fig:inference}B).}
+We restrict seed support to the cached foreground on the same native $z=160$
+plane and sample 512 distinct points uniformly without replacement (seed 0).
+Every seed and every multi-point prompt lies on the displayed plane. The CT
+input, validity extent, code prediction and sheet decoding remain fully 3D;
+only seed support changes. The same checkpoint and automatic settings produce
+93 initial clusters, 17 retained clusters and 13 final instances. After
+exclusions, 238 seeds remain and 274 are discarded. No GT or ignore masks are
+loaded. This illustrative run is separate from the fixed benchmark tables.
+Both matrix panels use the same logarithmic color scale; instance colors are
+local to each row and are not a cross-run identity matching.
 
 \paragraph{Measured latent identity separation.}
 Each of the eight fixed GT coordinates per band is queried separately, yielding

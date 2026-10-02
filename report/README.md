@@ -60,7 +60,8 @@ The initial CVPR writing revision is audited in `revision_validation.json`.
 It changes presentation and corrects the 0076 GT-query description.
 The raw-prediction Betti table was checked in
 `raw_prediction_betti_validation.json`. The previous method revision is checked in `method_clarity_validation.json`.
-The current three-figure redesign is checked in `three_figures_validation.json`. Matched ablations, runtime
+The initial three-figure redesign is checked in `three_figures_validation.json`.
+The added exact-plane seed example is checked in `slice_seed_figure_validation.json`. Matched ablations, runtime
 measurements and spatially disjoint generalization remain open experiments.
 
 Tables cover all 106 released, previously inspected test cubes. Training IDs
@@ -116,18 +117,22 @@ clustering/decoding. The three figures now explain these stages separately:
   frozen sheet decoder. The binary branch has residual blocks, not encoder-to-decoder skips.
 - [Automatic discovery](figures/automatic_discovery.png): all 512 full-code
   distances, cluster boundaries and excluded seeds, colored seed groups on CT,
-  and decoded sheets. Off-plane markers are explicitly distinguished.
+  and decoded sheets. Row A retains the volume-seed example; row B samples
+  all 512 seeds from the exact displayed plane. Off-plane markers in A are
+  explicitly distinguished. Colors are local to each row.
 
 The main figures use actual outputs from the existing research runs. Rebuild
 the local capture on an available GPU, then render without further inference:
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 python report/capture_method_figure_data.py --research_root /path/to/research/workspace
+CUDA_VISIBLE_DEVICES=0 python report/capture_slice_seed_figure.py --research_root /path/to/research/workspace --public_root "$PWD"
 python report/build_explanatory_method_figures.py --research_root /path/to/research/workspace
 ```
 
 The original research checkpoints and arrays must be present. The capture is
 saved under `runs_from_260914/evaluation/11_paper_three_method_figures/` in that
-workspace. Source arrays stay local; rendered PDF/PNG/SVG assets and their
+workspace. The exact-plane run is in `runs_from_260914/evaluation/12_paper_slice_seed_example/`.
+Source arrays stay local; rendered PDF/PNG/SVG assets and their
 builders accompany the paper. This revision does not change benchmark results.
 Earlier figure assets and audits remain historical records.

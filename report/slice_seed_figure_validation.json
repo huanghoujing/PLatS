@@ -1,0 +1,53 @@
+{
+  "status": "passed",
+  "created_utc": "2026-10-02T17:54:04.489022+00:00",
+  "base_commit": "b7e5ecb82f6daf762a1f33bc9f13b0be506182f5",
+  "scope": "Second Figure 3 example: 512 foreground seeds restricted to the displayed native z=160 plane.",
+  "pages": {
+    "main": 6,
+    "references": 1,
+    "supplementary": 10,
+    "total": 17
+  },
+  "figure_3_page": 4,
+  "checks": {
+    "all_512_distinct_seeds_on_exact_displayed_plane": true,
+    "all_seeds_on_cached_foreground": true,
+    "all_multi_point_prompts_on_same_plane": true,
+    "CT_and_decoding_remain_full_3D": true,
+    "CT_foreground_checkpoint_hashes_verified": true,
+    "automatic_settings_match_existing_recipe": true,
+    "labels_or_ignore_read": false,
+    "distance_matrix_matches_direct_full_code_MSE": true,
+    "shared_distance_color_scale": true,
+    "colors_consistent_within_each_row": true,
+    "figure_visually_reviewed_at_paper_size": true,
+    "benchmark_tables_and_result_snapshot_unchanged": true,
+    "model_sources_configs_weights_unchanged": true,
+    "latex_errors": 0,
+    "undefined_references": 0,
+    "overfull_boxes": 0
+  },
+  "new_example": {
+    "initial_clusters": 93,
+    "retained_clusters": 17,
+    "retained_seeds": 238,
+    "discarded_seeds": 274,
+    "final_instances": 13,
+    "seed": 0,
+    "inference_and_local_export_seconds": 20.14044542890042
+  },
+  "source_arrays_remain_local": true,
+  "files_sha256": {
+    "README.md": "4256f03be8286d160924513a8294e4700dee242ffd3f0541aacd388ef9dd7a0b",
+    "build_explanatory_method_figures.py": "6f001bf72e902593dd3f6a5f221b9023a5a7327b6879c26a8f36592ac1b60802",
+    "capture_slice_seed_figure.py": "7294a548bf4854a1f03cae89f51a57f31a9ed8546f19f5aadeb3e9c99978363f",
+    "figures/automatic_discovery.pdf": "846153d78d76b6615c7d963ba57ebac32775caec272cb1b625b2b980a52628bf",
+    "figures/automatic_discovery.png": "1204dc4ea048c006743d563fea08151ffc1ee0cd4f8907189a09ae7413134f6e",
+    "figures/automatic_discovery.svg": "74c7da4b8dd2f99505fb0615c7fbb5613dc4391ccbb1833d8b5c4f857f966e14",
+    "index.html": "22675bdf192e4f71b38263781acdf23685820babe83d07e0332ba666af836245",
+    "report.pdf": "ed18d39c5fc6a232406b87f08bead35053450011757f2650b78c17316e0f6666",
+    "sections/method.tex": "22fa264d3cfc31825cb397be043a34f813fa5864508120a41a0b951f89d9469c",
+    "sections/supplementary.tex": "dc5af0c6416e6fa49bce087a3be0947670188a45faf7eee87e28c51e045dfd4e"
+  }
+}

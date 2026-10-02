@@ -179,61 +179,90 @@ def point_figure(data, out):
         label(ax,x+3.3,y+1.2,text,6.9,align='left')
     save(fig,out,'point_to_latent')
 
-def discovery_figure(data, record, research, out):
-    points,identity,groups=data['points'],data['identity'],data['cluster_id']
-    palette=np.vstack(([.65,.65,.65,1],plt.get_cmap('tab20')(np.arange(20))))
-    cmap=ListedColormap(palette);norm=BoundaryNorm(np.arange(-.5,21.5),len(palette))
-    fig,axs=plt.subplots(1,4,figsize=(7.2,2.85),gridspec_kw={'width_ratios':[1,1.18,1,1]})
-    fig.subplots_adjust(left=.005,right=.995,top=.84,bottom=.30,wspace=.20)
-    for ax,title in zip(axs,['(a) Foreground seeds','(b) Full-code MSE','(c) Clustered seeds','(d) Decoded sheets']):
-        ax.set_title(title,loc='left',fontsize=8,weight='bold',pad=8)
-        ax.set_xticks([]);ax.set_yticks([]);ax.set_box_aspect(1)
-        for spine in ax.spines.values():spine.set_visible(False)
-    near=np.abs(points[:,2]-160)<=12
-    exact=points[:,2]==160
+def _discovery_row(axes, data, distance_norm, *, plane_only):
+    points, identity, groups = data['points'], data['identity'], data['cluster_id']
+    palette = np.vstack(([.65,.65,.65,1], plt.get_cmap('tab20')(np.arange(20))))
+    assert identity.max() < len(palette)
+    cmap = ListedColormap(palette)
+    norm = BoundaryNorm(np.arange(-.5,21.5), len(palette))
+    titles = ['Foreground seeds', 'Full-code MSE', 'Clustered seeds', 'Decoded sheets']
+    for ax, title in zip(axes, titles):
+        ax.set_title(title, loc='left', fontsize=8, weight='bold', pad=8)
+        ax.set_xticks([]); ax.set_yticks([]); ax.set_box_aspect(1)
+        for spine in ax.spines.values(): spine.set_visible(False)
+    near = np.abs(points[:,2]-160) <= 12
+    exact = points[:,2] == 160
+    if plane_only:
+        assert exact.all(), 'Every displayed seed must lie on the exact plane.'
     for col in (0,2):
-        ax=axs[col];ax.imshow(data['image'],cmap='gray',vmin=0,vmax=255)
+        ax = axes[col]
+        ax.imshow(data['image'], cmap='gray', vmin=0, vmax=255)
         for on_plane in (False,True):
-            selected=near & (exact if on_plane else ~exact)
-            colors=palette[identity[selected]] if col==2 else np.tile([1,.97,.65,1],(selected.sum(),1))
-            ax.scatter(points[selected,0],points[selected,1],s=16,
-                facecolors=colors if on_plane else 'none',edgecolors=colors,linewidths=.8)
-        ax.set(xlim=(-.5,319.5),ylim=(319.5,-.5))
-    # Show every seed. Retained groups are ordered by final instance ID, then
-    # leader-cluster ID; discarded groups form a visibly separated gray block.
-    order=np.lexsort((np.arange(len(points)),groups,np.where(identity>0,identity,1000)))
-    sorted_ids=identity[order];sorted_groups=groups[order]
-    matrix=data['distance'][np.ix_(order,order)]
-    im=axs[1].imshow(np.maximum(matrix,1e-5),cmap='magma_r',
-        norm=LogNorm(vmin=1e-5,vmax=float(matrix.max())),interpolation='nearest')
-    boundaries=np.r_[0,np.flatnonzero(np.diff(sorted_groups))+1,len(points)]
+            selected = near & (exact if on_plane else ~exact)
+            colors = palette[identity[selected]] if col==2 else np.tile([1,.97,.65,1], (selected.sum(),1))
+            ax.scatter(points[selected,0], points[selected,1], s=3.5 if plane_only else 12,
+                facecolors=colors if on_plane else 'none', edgecolors=colors,
+                linewidths=.2 if plane_only else .7)
+        ax.set(xlim=(-.5,319.5), ylim=(319.5,-.5))
+    # Ordering is for display only. Actual leader clustering uses full-code
+    # distance to running centroids, with the same unchanged recipe in both rows.
+    order = np.lexsort((np.arange(len(points)), groups, np.where(identity>0,identity,1000)))
+    sorted_ids, sorted_groups = identity[order], groups[order]
+    matrix = data['distance'][np.ix_(order,order)]
+    im = axes[1].imshow(np.maximum(matrix,1e-5), cmap='magma_r', norm=distance_norm, interpolation='nearest')
+    boundaries = np.r_[0,np.flatnonzero(np.diff(sorted_groups))+1,len(points)]
     for lo,hi in zip(boundaries[:-1],boundaries[1:]):
         if sorted_ids[lo]>0:
-            axs[1].add_patch(Rectangle((lo-.5,lo-.5),hi-lo,hi-lo,fill=False,ec='white',lw=.35))
-    cutoff=int((identity>0).sum())
-    axs[1].axvline(cutoff-.5,color='#41b9c6',ls='--',lw=.65)
-    axs[1].axhline(cutoff-.5,color='#41b9c6',ls='--',lw=.65)
-    stripe=palette[sorted_ids][None,:,:]
-    top=axs[1].inset_axes([0,1.005,1,.035]);top.imshow(stripe,aspect='auto');top.axis('off')
-    left=axs[1].inset_axes([-.04,0,.035,1]);left.imshow(stripe.transpose(1,0,2),aspect='auto');left.axis('off')
-    cax=axs[1].inset_axes([.04,-.15,.92,.035])
-    cb=fig.colorbar(im,cax=cax,orientation='horizontal',ticks=[1e-5,1e-2,1])
-    cb.ax.tick_params(labelsize=6.4,length=2,pad=1)
-    cb.outline.set_linewidth(.4)
-    path=research/'runs_from_260914/evaluation/04_paper_automatic_hidden106_gpu0_gpu2/0058_kaggle/cases/sample_00860/instances.npz'
-    with np.load(path) as archive:inst=archive['inst'][:,:,160].T
-    axs[3].imshow(data['image'],cmap='gray',vmin=0,vmax=255)
-    axs[3].imshow(np.ma.masked_where(inst==0,inst),cmap=cmap,norm=norm,alpha=.94,interpolation='nearest')
+            axes[1].add_patch(Rectangle((lo-.5,lo-.5),hi-lo,hi-lo,fill=False,ec='white',lw=.35))
+    cutoff = int((identity>0).sum())
+    axes[1].axvline(cutoff-.5,color='#41b9c6',ls='--',lw=.65)
+    axes[1].axhline(cutoff-.5,color='#41b9c6',ls='--',lw=.65)
+    stripe = palette[sorted_ids][None,:,:]
+    top = axes[1].inset_axes([0,1.005,1,.035]); top.imshow(stripe,aspect='auto'); top.axis('off')
+    left = axes[1].inset_axes([-.04,0,.035,1]); left.imshow(stripe.transpose(1,0,2),aspect='auto'); left.axis('off')
+    axes[3].imshow(data['image'],cmap='gray',vmin=0,vmax=255)
+    axes[3].imshow(np.ma.masked_where(data['instances']==0,data['instances']),
+                   cmap=cmap,norm=norm,alpha=.94,interpolation='nearest')
+    return im
+
+
+def discovery_figure(data, record, research, out):
+    source = research/'runs_from_260914/evaluation/04_paper_automatic_hidden106_gpu0_gpu2/0058_kaggle/cases/sample_00860/instances.npz'
+    with np.load(source) as f:
+        volume = {**data, 'instances':f['inst'][:,:,160].T}
+    folder = research/'runs_from_260914/evaluation/12_paper_slice_seed_example'
+    with np.load(folder/'figure_data.npz') as f:
+        planar = {key:f[key] for key in f.files}
+    np.testing.assert_array_equal(volume['image'],planar['image'])
+    distance_norm = LogNorm(vmin=1e-5,vmax=max(volume['distance'].max(),planar['distance'].max()))
+    fig, axes = plt.subplots(2,4,figsize=(7.2,5.2),gridspec_kw={'width_ratios':[1,1.18,1,1]})
+    fig.subplots_adjust(left=.005,right=.995,top=.89,bottom=.20,hspace=.70,wspace=.20)
+    _discovery_row(axes[0],volume,distance_norm,plane_only=False)
+    im = _discovery_row(axes[1],planar,distance_norm,plane_only=True)
     fig.canvas.draw()
-    centers=[(ax.get_position().x0+ax.get_position().x1)/2 for ax in axs]
-    fig.text(centers[0],.20,'Encode CT once\nReuse its features\nOne code per seed',ha='center',va='top',fontsize=7.1)
-    fig.text(centers[1],.17,f'{cutoff} kept / {len(points)-cutoff} discarded',ha='center',va='top',fontsize=6.9)
-    fig.text(centers[2],.20,'Groups → multi-point\nprompts → code prediction',ha='center',va='top',fontsize=7.1)
-    fig.text(centers[3],.20,'Frozen sheet decoder\n+ instance cleanup',ha='center',va='top',fontsize=7.1)
+    for row, row_data, title in [(0,volume,'A · Seeds sampled throughout the 3D crop'),
+                                 (1,planar,'B · All seeds sampled on the displayed z=160 plane')]:
+        top = max(ax.get_position().y1 for ax in axes[row])
+        kept = int((row_data['identity']>0).sum())
+        fig.text(.005,top+.075,title,fontsize=8.3,weight='bold',va='bottom')
+        bottom = min(ax.get_position().y0 for ax in axes[row])
+        x = (axes[row,1].get_position().x0+axes[row,1].get_position().x1)/2
+        fig.text(x,bottom-.023,f'{kept} kept / {512-kept} discarded',ha='center',va='top',fontsize=7)
+    upper_top = max(ax.get_position().y1 for ax in axes[0])
+    fig.text(.005,upper_top+.043,'Filled markers: z=160. Hollow markers: z=148–172 slab.',fontsize=6.9,va='bottom')
+    centers = [(ax.get_position().x0+ax.get_position().x1)/2 for ax in axes[1]]
+    fig.text(centers[0],.105,'Encode CT once\nOne code per seed',ha='center',va='top',fontsize=7.1)
+    cax = fig.add_axes([axes[1,1].get_position().x0,.104,axes[1,1].get_position().width,.012])
+    cb = fig.colorbar(im,cax=cax,orientation='horizontal',ticks=[1e-5,1e-2,1])
+    cb.ax.tick_params(labelsize=6.4,length=2,pad=1); cb.outline.set_linewidth(.4)
+    fig.text(centers[1],.058,'MSE · shared log scale',ha='center',va='top',fontsize=6.7)
+    fig.text(centers[2],.105,'Groups → multi-point\nprompts → code prediction',ha='center',va='top',fontsize=7.1)
+    fig.text(centers[3],.105,'Frozen sheet decoder\n+ instance cleanup',ha='center',va='top',fontsize=7.1)
     for a,b in zip(centers,centers[1:]):
-        fig.text((a+b)/2,.225,'→',ha='center',fontsize=11,color=COLORS['edge'])
-    fig.text(.005,.035,'CT plane z=160; seeds in z=148–172 slab. Filled: on-plane. Hollow: off-plane. Gray: discarded.',fontsize=7)
+        fig.text((a+b)/2,.13,'→',ha='center',fontsize=11,color=COLORS['edge'])
+    fig.text(.005,.008,'Same CT plane in both rows; 512 seeds per run. Instance colors are local to each row. Gray: discarded.',fontsize=7)
     save(fig,out,'automatic_discovery')
+
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)

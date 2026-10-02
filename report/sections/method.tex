@@ -90,12 +90,12 @@ sampling and cleanup are detailed in Supplementary.
 
 \begin{figure*}[t]
  \centering\includegraphics[width=\textwidth]{figures/automatic_discovery.pdf}
- \caption{\textbf{Automatic instance discovery.} The same CT features serve
- single-seed codes and later multi-point predictions. The matrix shows measured
- full-code MSE for all 512 seeds, ordered by final ID and retained cluster,
- followed by discarded groups. White diagonal outlines mark retained clusters;
- cyan dividers isolate discarded seeds. Clustering compares codes with running
- centroids, not a PCA projection. Matching colors link groups on CT to decoded
- sheets; hollow markers are off-plane within the labeled slab.}
+ \caption{\textbf{Automatic instance discovery.}
+ A: seeds sampled throughout the 3D crop, with nearby-slice markers displayed.
+ B: all 512 seeds sampled on the exact displayed plane. Both runs use the same
+ CT, foreground proposer and clustering/decoding settings; encoding and sheet
+ reconstruction remain 3D. Full-code MSE matrices share a logarithmic scale.
+ White outlines mark retained clusters; cyan dividers isolate discarded seeds.
+ Colors link seed groups to decoded sheets within each row; gray marks discards.}
  \label{fig:inference}
 \end{figure*}
