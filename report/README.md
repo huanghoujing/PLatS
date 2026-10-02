@@ -24,7 +24,7 @@ The new module figures are reproducible without datasets, model weights or a GPU
 
 ```bash
 python report/build_architecture_figures.py
-python -c "from report.build_paper_figures import architecture; architecture(include_inference=False)"
+python report/build_method_figures.py --training_only
 cd report
 latexmk -pdf report.tex
 ```
@@ -59,8 +59,9 @@ validation for the initial cleanup is in
 checks are in `../provenance/late_crop_joint_inference_validation.json`.
 The initial CVPR writing revision is audited in `revision_validation.json`.
 It changes presentation and corrects the 0076 GT-query description.
-The current PDF, including the raw-prediction Betti table, is checked in
-`raw_prediction_betti_validation.json`. Matched ablations, runtime
+The raw-prediction Betti table was checked in
+`raw_prediction_betti_validation.json`. The current method/figure revision
+is checked in `method_clarity_validation.json`. Matched ablations, runtime
 measurements and spatially disjoint generalization remain open experiments.
 
 Tables cover all 106 released, previously inspected test cubes. Training IDs
@@ -102,3 +103,25 @@ python report/compute_raw_prediction_betti.py \
 The script verifies input hashes and native shapes, and checks agreement with
 the previous raw audit. It needs NumPy/SciPy and the repository source; no GPU,
 model inference or exact feature matching is needed for these whole-mask counts.
+
+## Two training stages and measured inference
+
+The main method defines the sheet AE, point-to-latent prediction and automatic
+clustering/decoding in that order. Essential heads, losses, notation and frozen
+modules stay in the main paper; dimensions, weights and sampling remain in the
+supplement. Figure 1 combines the two training stages. Figure 2 uses actual
+seeds, independently labeled same/different-sheet distance distributions, code
+clusters and decoded sheets. Predicted instance colors match across the seed,
+cluster and sheet panels; the distance analysis uses GT identities across 106
+crops and is explicitly distinguished from that automatic example.
+
+Rebuild both main figures from the saved research arrays:
+
+```bash
+python report/build_method_figures.py --research_root /path/to/research/workspace
+```
+
+The builder checks measured pair counts, quantiles and AUROC against the frozen
+result snapshot. It writes rendered figures only; source per-case arrays remain
+in the research workspace. Earlier main-diagram assets and experimental audits
+are retained as historical records.

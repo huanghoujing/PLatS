@@ -2,86 +2,89 @@
 \label{sec:method}
 
 \begin{figure*}[t]
- \centering\includegraphics[width=\textwidth]{figures/ae.pdf}
- \caption{\textbf{Learn the sheet space.} Reconstruct a clean sheet from a
- corrupted mask through a latent bottleneck. Auxiliary distance heads and
- regularizers shape the representation. After training, freeze the AE.}
- \label{fig:ae}
+ \centering\includegraphics[width=\textwidth]{figures/training_overview.pdf}
+ \caption{\textbf{Two training stages, one sheet representation.}
+ (a) Train the sheet AE with occupancy, distance and regularization losses.
+ (b) Freeze the AE and predict its normalized code from CT and points.
+ The binary branch supervises shared CT features; sheet decoding is deferred
+ until masks are needed. Blue modules are trainable in the displayed stage;
+ gray modules are frozen. $\mathcal N$ denotes fixed code normalization.}
+ \label{fig:trainingoverview}\label{fig:ae}\label{fig:training}
 \end{figure*}
 
-\begin{figure*}[t]
- \centering\includegraphics[width=\textwidth]{figures/training.pdf}
- \caption{\textbf{Learn point-to-sheet prediction.} CT and positive points
- predict the frozen AE's sheet code. The binary branch jointly supervises
- CT features; the new automatic recipe also uses it for seed proposal.
- Blue modules are trained; gray modules are frozen or inputs.
- The frozen sheet decoder produces the final mask at inference.}
- \label{fig:training}
-\end{figure*}
+PLatS learns a sheet representation, then learns to predict it from CT and
+points (Fig.~\ref{fig:trainingoverview}). At inference, the same representation
+groups foreground seeds and reconstructs individual sheets.
 
-PLatS first learns a single-sheet code, then predicts it from CT and points.
-At inference, the same code space supports prompted reconstruction and
-automatic instance discovery. Detailed modules and losses are in Supplementary.
-
-\subsection{Learn a sheet representation}
-An autoencoder learns to reconstruct a clean sheet mask $S$ from its corrupted
-version $\widetilde S$:
+\subsection{Stage 1: learn the sheet AE}
+Let $S$ be a clean binary sheet mask and $\widetilde S$ a corrupted version.
+The encoder $E$ maps it to a latent code $z$, and the occupancy decoder $D$
+reconstructs a probability map $Q$:
 \begin{equation}
  z=E(\widetilde S),\qquad Q=\sigmoid(D(z)).
  \label{eq:aesimple}
 \end{equation}
-$E$ is the sheet encoder, $z$ its latent code, $D$ the occupancy decoder,
-and $Q$ the reconstructed probability map; $\sigmoid$ is the sigmoid function.
-There are no encoder--decoder skip connections: the shape must pass through
-$z$ (Fig.~\ref{fig:ae}). Occupancy heads use BCE and Dice losses;
-dense and point-query distance heads use Smooth L1 supervision.
-Different-sheet code repulsion and outside-sheet/border penalties regularize
-training. Exact heads, noise and loss weights are in Supplementary.
-No explicit topology loss is used.
+Here $\sigmoid$ is the sigmoid function and $D$ includes the final occupancy
+head. There are no encoder--decoder skip connections: reconstruction must
+pass through $z$. Intermediate occupancy heads predict $Q^{(a)}$, where $a$
+indexes decoder stages. A sibling dense head predicts unsigned sheet distance
+$U$; a coordinate-query head $h(z,q)$ predicts distance at location $q$.
 
-\subsection{Predict the code from CT and points}
-CT encoding and image-context blocks $C$ extract a shared feature grid. A transformer $T$ combines
-these features with a set of positive points $P$ to predict a sheet code:
-\begin{equation}
- \widehat z=T(C(X),P),\qquad
- \widehat S=\mathbf1[\sigmoid(D(\widehat z))\ge 0.5].
+Final and intermediate occupancy heads use binary cross-entropy (BCE) and
+soft Dice losses against the clean sheet. Dense and query distances use
+Smooth L1 losses against GT distance targets. A cosine-margin penalty repels
+codes of different sheets; spatial penalties suppress foreground outside the
+sheet and at the crop border. All AE modules train in this stage and are
+then frozen. The bottleneck \emph{empirically favors valid sheet topology},
+without a mathematical guarantee or an explicit topology loss.
+
+\subsection{Stage 2: learn point-to-latent prediction}
+For CT crop $X$ and positive point set $P$, the image encoder and context
+blocks $C$ produce shared features $F$. The point transformer and code heads
+$T$ predict a normalized code $\widehat{\bar z}$:
+\begin{align}
+ F&=C(X),\qquad \bar z=\mathcal N(E(S)),\nonumber\\
+ \widehat{\bar z}&=T(F,P),\qquad
+ \mathcal L_{\rm code}=\mse(\widehat{\bar z},\bar z).
  \label{eq:predictsimple}
-\end{equation}
-$X$ is the CT crop, $\widehat z$ the predicted code, $\widehat S$ the binary
-sheet prediction, and $\mathbf1$ the indicator function.
-We train code prediction with MSE against the frozen AE's clean-sheet code;
-normalization is omitted here for clarity and defined in Supplementary.
-Same-sheet and different-sheet losses encourage consistent instance identity.
-A co-trained binary decoder $B$ shares the CT encoder and image context,
-then predicts the sheet union with BCE and Dice supervision
-(Fig.~\ref{fig:training}). The new training recipe crops only before the final
-upsampling stage, retaining earlier full-volume decoder context.
-The AE remains frozen, and the main point-to-sheet model needs no decoded
-occupancy loss during training.
-Prompt conditioning and latent prediction operate on a $10^3$ grid for a
-$320^3$ crop; full sheet decoding is deferred until a mask is needed.
-Supplementary details the modules, supervision and computational scope.
+\end{align}
+$\bar z$ is the frozen teacher target; $\mathcal N$ is fixed channel normalization
+estimated from training-sheet AE codes. MSE averages over all code elements.
+Intermediate code heads receive the same target. A same-sheet loss pulls
+predictions from different prompt sets toward their mean; a different-sheet
+MSE-margin loss separates codes within the same CT crop.
 
-\subsection{Discover instances automatically}
-Encode CT once and use the co-trained binary decoder to propose foreground
-seeds. Reuse the cached CT context to predict one code per seed, then cluster
-nearby codes using full-code MSE. For each retained
-cluster, combine consistent multi-point predictions and decode a sheet.
-Remove small components and duplicates, then assign overlapping voxels by
-predicted probability. Figure~\ref{fig:inference} shows an actual example.
-The reported automatic benchmark fixes a separate foreground proposer and
-512 seeds per crop to control inputs across checkpoints; its measured outputs
-are retained in Fig.~\ref{fig:inference}. The co-trained proposal path is the
-new recipe and has not been benchmarked here. Thresholds and exclusions are
-in Supplementary. Raw prompted topology is measured before cleanup.
+The co-trained binary decoder $B$ predicts union probability
+$V=\sigmoid(B(F))$. BCE and Dice supervise $V$ against the GT sheet union
+$Y$ on annotated voxels. This stage updates $C$, $T$ and $B$ while the AE
+stays frozen. Its base objective needs no full-resolution sheet decoding:
+prompt-dependent prediction and supervision act on the compact latent grid.
+
+\subsection{Inference: cluster codes, then decode sheets}
+Compute $F$ once and sample seeds from the binary branch's foreground.
+Predict a code for each seed and cluster using full-code MSE. For each retained
+cluster, combine consistent multi-point code predictions and decode a sheet:
+\begin{equation}
+ \widehat S=\mathbf1[\sigmoid(D(\mathcal N^{-1}(\widehat{\bar z})))\ge\tau].
+ \label{eq:inferencedecode}
+\end{equation}
+$\widehat S$ is the binary sheet mask, $\mathbf1$ the indicator function,
+$\tau$ a probability threshold, and $\mathcal N^{-1}$ reverses normalization.
+Unstable clusters are discarded. Duplicate handling, component cleanup and
+probability-based overlap resolution produce final instance IDs.
+Sharing CT features and clustering before decoding avoids reconstructing
+a mask for every seed (Fig.~\ref{fig:inference}). Dimensions, loss weights,
+sampling and cleanup are detailed in Supplementary.
 
 \begin{figure*}[t]
- \centering\includegraphics[width=\textwidth]{figures/inference.pdf}
- \caption{\textbf{Automatic inference on a real CT crop.}
- Left to right: foreground seeds, cached CT features, predicted codes grouped
- by identity, and decoded instances. The CT and output use the same native
- $z$ slice of case 00860. The code plot is a 2D PCA display of all 512 measured
- codes; clustering uses their full dimension. Gray points are discarded.
- Colors link retained codes to final sheet IDs. See Supplementary for display details.}
+ \centering\includegraphics[width=\textwidth]{figures/inference_relationships.pdf}
+ \caption{\textbf{Measured latent relationships and automatic instances.}
+ (a,c,d) Automatic seeds, code clusters and decoded sheets in case 00860.
+ Colors consistently identify the same final predicted instances; seed colors
+ are assigned after clustering, and gray marks discarded seeds/codes.
+ (b) Empirical cumulative distributions of full-code MSE for same-sheet and
+ different-sheet pairs from the separate GT-prompt analysis over all 106 crops.
+ This panel measures identity separation; it does not use clustering labels.
+ The PCA panel is a display of the automatic codes, not the clustering metric.}
  \label{fig:inference}
 \end{figure*}

@@ -59,22 +59,27 @@ labels. Training-ID exclusion alone does not certify spatial disjointness.
 Cached CT inputs share five-voxel image-border zeroing; GT borders are retained.
 
 \section{Automatic clustering and instance diagnostics}
-\paragraph{Figure 3: measured inference intermediates.}
+\paragraph{Figure~\ref{fig:inference}: measured inference panels.}
 We reuse case 00860 and its central native $z=160$ section, as in the binary
-failure example. The frozen automatic run provides all 512 seed coordinates,
-foreground and final instances. A forward replay with the same 0058 checkpoint,
-BF16 precision and seed batch size 32 captures the CT context and all
-64,000-dimensional point codes. Replayed retained-cluster sizes match the
-saved inference log. Colors identify final instances after duplicate handling,
-so multiple retained clusters may share a color. Gray codes belong to discarded
-clusters; their exclusion is not hidden from the plot.
-CT seed markers use the $z\pm12$ slab for visibility, whereas the CT and mask
-images use the exact central plane. The feature panel shows channel RMS of
-the cached $10^3$ CT context at the corresponding depth, without interpolation.
-The code panel uses deterministic PCA over all 512 codes; its two components
-explain 27.8\% of variance. This projection is for display only: the algorithm
-clusters in full code space. It need not visibly separate all sheet identities.
-Native arrays, point codes, assignments and source hashes accompany the figure.
+failure example. The frozen automatic run provides all 512 seed coordinates
+and final instances. A replay with the same 0058 checkpoint, BF16 precision
+and seed batch size 32 captures the 64,000-dimensional point codes; retained
+cluster sizes match the saved log. Seeds, PCA points and output masks share
+one palette indexed by final predicted instance IDs. Seed colors are applied
+after inference for display, not supplied to the model. Multiple retained
+clusters can share a final ID after duplicate handling; gray indicates a
+discarded hypothesis. Seed markers use the $z\pm12$ slab, while CT and mask
+images use the exact central plane. Deterministic PCA explains 27.8\% of the
+code variance and is only a display; clustering uses the complete codes.
+
+The distance panel replaces feature-intensity visualization with measured
+identity separation. It uses all 21,392 same-band and 184,128 different-band
+pairs from the fixed GT-prompt analysis below, independently of the automatic
+cluster assignments. Curves are empirical cumulative distributions, normalized
+separately and displayed over a common logarithmic MSE axis. Their grayscale
+line styles denote pair classes, not the instance palette used in the other
+panels. The saved distance matrices reproduce the reported pair counts,
+quantiles and AUROC; no new threshold or model is fitted for the figure.
 
 \paragraph{Measured latent identity separation.}
 Each of the eight fixed GT coordinates per band is queried separately, yielding

@@ -10,9 +10,9 @@ Our central idea is to use \emph{one latent code for reconstruction and
 instance discovery}. A denoising autoencoder learns a compact representation
 of individual sheets. Given CT and one or more points, a transformer regresses
 that representation with MSE. The decoded code reconstructs a sheet; distances
-between codes group automatically sampled foreground points. For a $320^3$
-crop, prompt-dependent prediction operates on only $10^3$ spatial sites.
-Dense sheet decoding is required only for retained instance hypotheses.
+between codes group automatically sampled foreground points. Prompt-dependent
+computation stays on a compact latent grid; dense sheet decoding is required
+only for retained instance hypotheses.
 
 We contribute (i) a point-conditioned sheet representation that couples a
 learned shape prior with latent identity supervision; (ii) an automatic
@@ -20,9 +20,9 @@ seed--code--cluster--decode procedure that shares CT computation; and
 (iii) an evaluation separating raw sheet topology, automatic instance
 recovery, and topology changes introduced by annotation-ignore erasure.
 Large independently flattened surfaces expose downstream coverage and drift.
-Topology preservation is empirical: neither the architecture nor its losses
-guarantee it, and automatic segmentation does not yet exceed the winner's
-combined score.
+The representation empirically favors valid sheet topology; it provides
+no mathematical guarantee. Automatic segmentation does not yet exceed
+the winner's combined score.
 
 \paragraph{Relation to prior work.}
 ACNN learns anatomical representations to regularize image analysis

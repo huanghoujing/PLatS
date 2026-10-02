@@ -1,0 +1,65 @@
+{
+  "status": "passed",
+  "created_utc": "2026-10-02T16:19:36.917873+00:00",
+  "base_commit": "d2f092e43c628139af4edb9cb148d3bb6c48cc35",
+  "scope": "Method writing and rendered figures; unchanged experimental measurements and model code.",
+  "pages": {
+    "main": 5,
+    "references": 1,
+    "supplementary": 9,
+    "total": 15
+  },
+  "main_figure_pages": {
+    "training_overview": 2,
+    "inference_relationships": 3
+  },
+  "checks": {
+    "latex_errors": 0,
+    "undefined_references": 0,
+    "overfull_boxes": 0,
+    "tables_unchanged": true,
+    "results_snapshot_unchanged": true,
+    "model_code_configs_weights_unchanged": true,
+    "final_main_figure_pages_visually_reviewed": [
+      2,
+      3
+    ],
+    "normalized_code_notation_matches_supplement": true,
+    "heads_losses_and_frozen_modules_defined_in_main": true,
+    "architecture_dimensions_weights_sampling_in_supplement": true,
+    "figure_builder_completed": true,
+    "distance_counts_quantiles_auc_checked_against_frozen_snapshot": true
+  },
+  "distance_panel": {
+    "population": "GT-annotated bands; single-point codes; all within-case pairs",
+    "cases": 106,
+    "same_sheet_pairs": 21392,
+    "different_sheet_pairs": 184128,
+    "pair_auroc": 0.9120975732803345,
+    "display": "Separate empirical cumulative distributions on a shared logarithmic MSE axis",
+    "new_threshold_fitting": false
+  },
+  "automatic_panels": {
+    "seed_count": 512,
+    "colors": "Shared final predicted instance IDs; applied after clustering; gray is discarded",
+    "pca_is_clustering_metric": false,
+    "raw_arrays_published_by_this_revision": false
+  },
+  "files_sha256": {
+    "README.md": "ff3b9d1268c164088878a139cc217e82387a9c4ad48797cf5c6eeacd1e560120",
+    "build_method_figures.py": "2ff2ef9a00a272e7044ff5436b98c1ad7d743d7cf815a90ce895eda4190622b4",
+    "figures/inference_relationships.pdf": "ee5e422bbabde0e95db20f5188c2782ecb1f7c2b9e53ada062765b9786191633",
+    "figures/inference_relationships.png": "8952dcc7cfb6c44e3b94aced1ac4d336c03ecf6fd87dd18bc6c0b0fcd9805c3e",
+    "figures/inference_relationships.svg": "d40ae0ed3834a00730851d5a4e671e2615422119e785d921a62204b59921733c",
+    "figures/training_overview.pdf": "eb88e6672a9a9ba1d443e3bffeb5a52d1d2d5ea0362323412dc8d7511101c656",
+    "figures/training_overview.png": "8e50cd937f3643134cba6bc310735df30a1febc561ef2f690438ae065cbb3501",
+    "figures/training_overview.svg": "45233eb11753ac8156d4cfc21dee305e8c91442f8b84ec881614dbba8bcc2c77",
+    "index.html": "7ac2da7641ac5573b7752de686787bd9cfb93bcf396d6a148f7d4213286a8b83",
+    "report.pdf": "dfc6d113f9539090f63e5cff4d2c2ae52469fa111ebdfbc04256777e3cbbb88b",
+    "sections/experiments.tex": "2741e6fa712ccd663c30bc2af7c50c00f508f1f93f4ac841caa71250272a472c",
+    "sections/introduction.tex": "aa128ec02a9b330c73032392f792b3075cf3fc15c3fef08fd00f6d44bf44988a",
+    "sections/method.tex": "01a3bff3973ddf65410e0842b2001104098b1f9eff6cdc64a5423a4543bae0f3",
+    "sections/model_details.tex": "db9c07befdf884b55e30473e7adf4e727479585031200277b8d978b8c9b425f1",
+    "sections/supplementary.tex": "2828507e225f37179cc511d7573fa55071a53fab8a652430800d9dd788c528d0"
+  }
+}
