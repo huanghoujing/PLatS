@@ -36,6 +36,23 @@ const state = {
   boxes: [],
   timer: null,
 };
+state.automatic = null;
+state.referenceLabels = null;
+state.surfaceRequests = { reference: 0, automatic: 0 };
+function colorFor(id) {
+  if (id <= colors.length) return colors[id - 1];
+  const hue = (id * 137.508) % 360,
+    saturation = 0.65,
+    lightness = 0.66;
+  const a = saturation * Math.min(lightness, 1 - lightness);
+  const channel = (n) => {
+    const k = (n + hue / 30) % 12;
+    return Math.round(255 * (lightness - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))))
+      .toString(16)
+      .padStart(2, "0");
+  };
+  return `#${channel(0)}${channel(8)}${channel(4)}`;
+}
 const token = location.hash.slice(1) || sessionStorage.getItem("plats-token");
 if (token) {
   sessionStorage.setItem("plats-token", token);
@@ -149,11 +166,13 @@ function renderControls() {
   $("threshold-value").textContent = sheet.threshold.toFixed(2);
   $("decode").disabled = !sheet.points.length || state.loading;
   $("undo").disabled = !sheet.points.length || state.loading;
+  $("automatic").disabled = state.loading || state.busy;
+  $("load").disabled = state.loading || state.busy;
   $("export").disabled =
     state.loading ||
     state.busy ||
     [...state.sheets.values()].some((s) => s.dirty) ||
-    ![...state.sheets.values()].some((s) => s.prediction);
+    (![...state.sheets.values()].some((s) => s.prediction) && !state.automatic);
   $("new-sheet").disabled = state.loading;
 }
 function edited(sheet) {
@@ -183,6 +202,12 @@ function draw() {
   const shape = state.meta.shape,
     alpha = +$("opacity").value,
     showGT = $("show-gt").checked && state.gt;
+  const referenceId = +$("reference-id").value;
+  const reference = state.referenceLabels;
+  const inReference = (k) =>
+    reference ? (referenceId ? reference[k] === referenceId : reference[k] > 0) : !!state.gt?.[k];
+  const automaticLabels = $("automatic-overlay").checked ? state.automatic?.labels : null;
+  const autoColors = state.automatic?.colors || {};
   const lo = +$("low").value,
     windowScale = 255 / (Math.max(lo + 1, +$("high").value) - lo);
   const strides = [shape[1] * shape[2], shape[2], 1];
@@ -209,19 +234,23 @@ function draw() {
           j = (y * w + x) * 4;
         let grey = Math.min(255, Math.max(0, Math.round((state.image[k] - lo) * windowScale)));
         let rgb = [grey, grey, grey];
+        if (automaticLabels?.[k]) {
+          const color = autoColors[automaticLabels[k]];
+          rgb = rgb.map((value, c) => value * (1 - alpha) + color[c] * alpha);
+        }
         for (const sheet of ready)
           if (sheet.prediction.mask[k])
             rgb = rgb.map((value, c) => value * (1 - alpha) + sheet.rgb[c] * alpha);
-        if (showGT && state.gt[k]) {
+        if (showGT && inReference(k)) {
           const edge =
             x === 0 ||
             y === 0 ||
             x === w - 1 ||
             y === height - 1 ||
-            !state.gt[k - strides[h]] ||
-            !state.gt[k + strides[h]] ||
-            !state.gt[k - strides[v]] ||
-            !state.gt[k + strides[v]];
+            !inReference(k - strides[h]) ||
+            !inReference(k + strides[h]) ||
+            !inReference(k - strides[v]) ||
+            !inReference(k + strides[v]);
           if (edge) rgb = [116, 237, 135];
         }
         pixels.data[j] = rgb[0];
@@ -233,6 +262,10 @@ function draw() {
     const canvas = $(`slice-${axis}`),
       rect = canvas.getBoundingClientRect(),
       dpr = Math.min(devicePixelRatio, 2);
+    if (!rect.width || !rect.height) {
+      state.boxes[axis] = null;
+      continue;
+    }
     canvas.width = Math.round(rect.width * dpr);
     canvas.height = Math.round(rect.height * dpr);
     const c = canvas.getContext("2d");
@@ -281,12 +314,15 @@ function draw() {
   }
   scene?.updatePlanes(state.slices, $("planes").checked);
   scene?.showSurfaces($("surfaces").checked);
+  scene?.showOverlay("reference", $("reference-3d").checked);
+  scene?.showOverlay("automatic", $("automatic-3d").checked);
   $("window-value").textContent = `${$("low").value}–${$("high").value}`;
   $("opacity-value").textContent = `${Math.round(alpha * 100)}%`;
 }
 async function waitJob(job) {
   while (true) {
     const result = await api(`/api/jobs/${job}`);
+    if (result.kind === "automatic" && result.message) status(result.message, true);
     if (result.status === "error") throw new Error(result.error);
     if (result.status === "done") return result.result;
     await new Promise((resolve) => setTimeout(resolve, 250));
@@ -354,12 +390,17 @@ async function requestDecode(id = state.active) {
 }
 async function loadData() {
   state.meta = await api("/api/meta");
-  const [image, gt] = await Promise.all([
+  const [image, gt, reference] = await Promise.all([
     api("/api/image", null, true),
     state.meta.has_gt ? api("/api/gt", null, true) : Promise.resolve(null),
+    state.meta.has_gt ? api("/api/reference", null, true) : Promise.resolve(null),
   ]);
   state.image = new Uint8Array(image);
   state.gt = gt ? new Uint8Array(gt) : null;
+  state.referenceLabels = reference ? new Uint32Array(reference) : null;
+  state.automatic = null;
+  state.surfaceRequests.reference++;
+  state.surfaceRequests.automatic++;
   state.slices = state.meta.shape.map((n) => Math.floor(n / 2));
   state.sheets.clear();
   state.pending.clear();
@@ -369,6 +410,21 @@ async function loadData() {
   $("image-path").value = state.meta.path;
   $("gt-path").value = state.meta.gt_path;
   $("show-gt").disabled = !state.meta.has_gt;
+  $("reference-kind").value = state.meta.reference_kind;
+  const source = state.meta.source || {};
+  $("input-source").value = source.kind === "zarr" ? "zarr" : "local";
+  updateInputSource();
+  if (source.kind === "zarr") {
+    $("zarr-url").value = source.url;
+    ["x", "y", "z"].forEach((a, i) => {
+      $(`start-${a}`).value = source.origin_xyz[i];
+    });
+    $("zarr-level").value = source.level;
+    $("crop-info").textContent += ` · start XYZ ${source.origin_xyz.join(", ")}`;
+  }
+  fillIds("reference-id", state.meta.reference_ids, "No reference loaded");
+  $("reference-3d").disabled = !state.meta.reference_ids.length;
+  if (!state.meta.reference_ids.length) $("reference-3d").checked = false;
   mappings.forEach((_, i) => {
     $(`slider-${i}`).max = state.meta.shape[i] - 1;
     planes[i].width = state.meta.shape[mappings[i].h];
@@ -393,6 +449,9 @@ async function loadData() {
     draw();
   } else newSheet();
   scene?.updatePoints(state.sheets);
+  await installAutomatic(state.meta.automatic);
+  applyLayout();
+  if ($("reference-3d").checked) updateSurface("reference");
   status(state.meta.ready);
   if (state.meta.ready.startsWith("Preparing")) pollPreparation(state.meta.generation);
 }
@@ -502,7 +561,21 @@ $("load").onclick = async () => {
   renderControls();
   status("Opening crop and caching CT features…", true);
   try {
-    const result = await api("/api/load", { image: $("image-path").value, gt: $("gt-path").value });
+    const payload =
+      $("input-source").value === "zarr"
+        ? {
+            source: "zarr",
+            url: $("zarr-url").value,
+            start_xyz: ["x", "y", "z"].map((a) => Number($(`start-${a}`).value)),
+            level: Number($("zarr-level").value),
+          }
+        : {
+            source: "local",
+            image: $("image-path").value,
+            gt: $("gt-path").value,
+            reference_kind: $("reference-kind").value,
+          };
+    const result = await api("/api/load", payload);
     await waitJob(result.job);
     await loadData();
   } catch (error) {
@@ -521,15 +594,135 @@ $("export").onclick = async () => {
   );
   state.loading = true;
   renderControls();
-  status("Writing NIFTIs on the server…", true);
+  status("Writing lossless volumes on the server…", true);
   try {
-    const job = await api("/api/export", { generation: state.meta.generation, revisions });
+    const format = $("export-format").value;
+    const formats = format === "both" ? ["nifti", "tiff"] : [format];
+    const job = await api("/api/export", {
+      generation: state.meta.generation,
+      revisions,
+      automatic_revision: state.automatic?.revision,
+      formats,
+    });
     const result = await waitJob(job.job);
     notice(`Saved CT, prompts, probabilities, masks, and session provenance:\n${result.path}`);
-    status("NIFTI export complete");
+    status("Export complete");
   } catch (error) {
     notice(error.message, true);
     status("Export failed", false, true);
+  } finally {
+    state.loading = false;
+    renderControls();
+  }
+};
+function updateInputSource() {
+  const remote = $("input-source").value === "zarr";
+  $("local-inputs").hidden = remote;
+  $("zarr-inputs").hidden = !remote;
+}
+$("input-source").onchange = updateInputSource;
+function fillIds(elementId, values, emptyMessage) {
+  const select = $(elementId);
+  select.replaceChildren();
+  for (const row of values || []) {
+    const option = document.createElement("option");
+    option.value = row.id;
+    option.textContent = `ID ${row.id} · ${row.voxels.toLocaleString()} voxels`;
+    select.append(option);
+  }
+  if (!select.options.length) {
+    const option = document.createElement("option");
+    option.value = 0;
+    option.textContent = emptyMessage;
+    select.append(option);
+  }
+  select.disabled = !values?.length;
+}
+function applyLayout() {
+  const value = $("layout").value,
+    single = value !== "three",
+    show3d = $("show-3d-panel").checked;
+  const workspace = document.querySelector(".workspace");
+  workspace.classList.toggle("focus", single);
+  workspace.classList.toggle("no-3d", !show3d);
+  for (let axis = 0; axis < 3; axis++) $(`panel-${axis}`).hidden = single && +value !== axis;
+  $("panel-3").hidden = !show3d;
+  requestAnimationFrame(() => {
+    draw();
+    scene?.resize();
+  });
+}
+$("layout").onchange = applyLayout;
+$("show-3d-panel").onchange = applyLayout;
+async function updateSurface(kind) {
+  const identity = +$(kind === "reference" ? "reference-id" : "automatic-id").value;
+  const show = $(kind === "reference" ? "reference-3d" : "automatic-3d").checked;
+  const request = ++state.surfaceRequests[kind],
+    generation = state.meta.generation;
+  scene?.removeSheet(kind);
+  if (!show || !identity) return;
+  try {
+    const job = await api("/api/surface", { kind, id: identity, generation });
+    const result = await waitJob(job.job);
+    if (
+      result.discarded ||
+      request !== state.surfaceRequests[kind] ||
+      generation !== state.meta.generation
+    )
+      return;
+    const mesh = await api(`/api/surface/${result.key}`, null, true);
+    if (request !== state.surfaceRequests[kind] || generation !== state.meta.generation) return;
+    scene?.setSheet(kind, mesh, kind === "reference" ? "#74ed87" : colorFor(identity), kind);
+    draw();
+  } catch (error) {
+    notice(error.message, true);
+  }
+}
+$("reference-id").onchange = () => {
+  draw();
+  updateSurface("reference");
+};
+$("reference-3d").onchange = () => updateSurface("reference");
+$("automatic-id").onchange = () => updateSurface("automatic");
+$("automatic-3d").onchange = () => updateSurface("automatic");
+$("automatic-overlay").onchange = draw;
+async function installAutomatic(info) {
+  state.automatic = null;
+  scene?.removeSheet("automatic");
+  fillIds("automatic-id", info?.instances, "Run segmentation first");
+  if (!info) {
+    $("automatic-info").textContent = "Foreground → 512 seeds → latent clustering → sheet decoding";
+    return;
+  }
+  const labels = new Uint16Array(await api("/api/automatic-labels", null, true));
+  const rgb = {};
+  for (const row of info.instances)
+    rgb[row.id] = colorFor(row.id)
+      .match(/\w\w/g)
+      .map((h) => parseInt(h, 16));
+  state.automatic = { ...info, labels, colors: rgb };
+  $("automatic-info").textContent =
+    `${info.instances.length} instances · ${info.timings.total_seconds.toFixed(1)}s · CT encodes ${info.timings.image_encodes}`;
+  if ($("automatic-3d").checked) updateSurface("automatic");
+  renderControls();
+  draw();
+}
+$("automatic").onclick = async () => {
+  if (state.loading || state.busy) return;
+  clearTimeout(state.timer);
+  state.loading = true;
+  renderControls();
+  status("Automatic foreground → clustering → sheet decoding…", true);
+  try {
+    const job = await api("/api/automatic", { generation: state.meta.generation });
+    const result = await waitJob(job.job);
+    if (result.discarded) return;
+    state.meta.automatic = result.automatic;
+    await installAutomatic(result.automatic);
+    status(`Automatic segmentation complete: ${result.automatic.instances.length} instances`);
+  } catch (error) {
+    notice(error.message, true);
+    status("Automatic segmentation failed", false, true);
   } finally {
     state.loading = false;
     renderControls();
@@ -568,4 +761,11 @@ window.platsDiagnostics = () => ({
   })),
   boxes: state.boxes,
   webgl: !!scene,
+  layout: $("layout").value,
+  referenceId: +$("reference-id").value,
+  referenceSurface: !!scene?.meshes.get("reference"),
+  automaticInstances: state.automatic?.instances.length || 0,
+  automaticSurface: !!scene?.meshes.get("automatic"),
+  generation: state.meta?.generation,
+  loading: state.loading,
 });

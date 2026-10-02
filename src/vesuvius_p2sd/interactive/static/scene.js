@@ -12,6 +12,10 @@ export class SurfaceView {
     container.append(this.renderer.domElement);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
+    this.needsRender = true;
+    this.controls.addEventListener("change", () => {
+      this.needsRender = true;
+    });
     this.root = new THREE.Group();
     this.scene.add(this.root);
     this.meshes = new Map();
@@ -31,10 +35,14 @@ export class SurfaceView {
     new ResizeObserver(() => this.resize()).observe(container);
     this.renderer.setAnimationLoop(() => {
       this.controls.update();
-      this.renderer.render(this.scene, this.camera);
+      if (this.needsRender) {
+        this.renderer.render(this.scene, this.camera);
+        this.needsRender = false;
+      }
     });
   }
   disposeObject(object) {
+    this.needsRender = true;
     object.traverse((child) => {
       child.geometry?.dispose();
       if (child.material) {
@@ -45,6 +53,7 @@ export class SurfaceView {
     object.removeFromParent();
   }
   reset(shape, mappings, canvases) {
+    this.needsRender = true;
     for (const object of [...this.root.children]) this.disposeObject(object);
     this.shape = shape;
     this.meshes.clear();
@@ -114,7 +123,8 @@ export class SurfaceView {
   }
   resetCamera() {
     const n = Math.max(...this.shape);
-    this.camera.position.set(n * 1.3, -n * 1.2, n * 1.4);
+    const fit = Math.max(1, 1 / this.camera.aspect);
+    this.camera.position.set(n * 1.3 * fit, -n * 1.2 * fit, n * 1.4 * fit);
     this.controls.target.set(0, 0, 0);
     this.controls.update();
   }
@@ -122,11 +132,16 @@ export class SurfaceView {
     const w = this.container.clientWidth,
       h = this.container.clientHeight;
     if (!w || !h) return;
+    const previousAspect = this.camera.aspect;
     this.camera.aspect = w / h;
+    const ratio = Math.min(previousAspect, 1) / Math.min(this.camera.aspect, 1);
+    this.camera.position.sub(this.controls.target).multiplyScalar(ratio).add(this.controls.target);
+    this.needsRender = true;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
   }
   updatePlanes(slices, visible) {
+    this.needsRender = true;
     this.planes.forEach(({ plane, fixed, texture }) => {
       plane.position.setComponent(fixed, slices[fixed]);
       plane.visible = visible;
@@ -138,7 +153,8 @@ export class SurfaceView {
     if (mesh) this.disposeObject(mesh);
     this.meshes.delete(id);
   }
-  setSheet(id, buffer, color) {
+  setSheet(id, buffer, color, kind = "prompted") {
+    this.needsRender = true;
     this.removeSheet(id);
     const header = new DataView(buffer),
       nv = header.getUint32(0, true),
@@ -157,11 +173,21 @@ export class SurfaceView {
       roughness: 0.65,
       metalness: 0.08,
     });
+    if (kind === "reference") {
+      material.transparent = true;
+      material.opacity = 0.32;
+      material.depthWrite = false;
+      material.polygonOffset = true;
+      material.polygonOffsetFactor = -1;
+      material.polygonOffsetUnits = -1;
+    }
     const mesh = new THREE.Mesh(geometry, material);
+    mesh.userData.kind = kind;
     this.root.add(mesh);
     this.meshes.set(id, mesh);
   }
   updatePoints(sheets) {
+    this.needsRender = true;
     for (const child of [...this.markers.children]) this.disposeObject(child);
     for (const sheet of sheets.values())
       for (const point of sheet.points) {
@@ -174,7 +200,14 @@ export class SurfaceView {
         this.markers.add(marker);
       }
   }
+  showOverlay(key, visible) {
+    this.needsRender = true;
+    const mesh = this.meshes.get(key);
+    if (mesh) mesh.visible = visible;
+  }
   showSurfaces(visible) {
-    for (const mesh of this.meshes.values()) mesh.visible = visible;
+    this.needsRender = true;
+    for (const mesh of this.meshes.values())
+      if (mesh.userData.kind === "prompted") mesh.visible = visible;
   }
 }

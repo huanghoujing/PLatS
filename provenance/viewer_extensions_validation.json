@@ -1,0 +1,88 @@
+{
+  "status": "passed",
+  "created_utc": "2026-10-02T22:35:56.945797+00:00",
+  "unit_tests_passed": 9,
+  "browser_checks": {
+    "reference_3d_with_prediction": true,
+    "enlarged_slice_height_ratio": 2.1906976744186046,
+    "single_slice_click_exact": true,
+    "hide_3d_panel": true,
+    "challenge_tiff_load": true,
+    "automatic_button_14_instances": true,
+    "automatic_tiff_export": true,
+    "official_zarr_xyz_load": true,
+    "remote_click_decode": true,
+    "remote_tiff_export": true,
+    "javascript_errors": []
+  },
+  "export_checks": {
+    "automatic_ids_exact_in_challenge_zyx": true,
+    "remote_ct_exact_in_challenge_zyx": true,
+    "automatic_lossless_deflate": true,
+    "automatic_axes_zyx": true,
+    "remote_prediction_lossless_deflate": true,
+    "remote_prediction_axes_zyx": true,
+    "remote_origin_recorded": true
+  },
+  "live_upgrade": {
+    "passed": true,
+    "preserved_sheets": 5,
+    "reference_surface": true,
+    "single_slice": true,
+    "javascript_errors": []
+  },
+  "session_preserved": {
+    "sheets": 5,
+    "all_masks_exact": true,
+    "url_token_preserved": true
+  },
+  "automatic": {
+    "exact_released_instance_ids": true,
+    "instances": 14,
+    "total_seconds": 14.129896999918856,
+    "image_encodes": 1
+  },
+  "remote": {
+    "scroll": "PHerc0139",
+    "shape": [
+      320,
+      320,
+      320
+    ],
+    "origin_xyz": [
+      3612,
+      3942,
+      4572
+    ],
+    "seconds": 5.763045434025116,
+    "axes": "source ZYX -> model XYZ -> TIFF ZYX"
+  },
+  "conventions": {
+    "tiff_compression": "Deflate, lossless",
+    "automatic_dtype": "uint16",
+    "binary_output_dtype": "uint8",
+    "challenge_reference_ignore_value": 2
+  },
+  "limits": [
+    "3D uint8 CT; local crops with sides 32..320; remote crops are exactly 320 cubed.",
+    "Remote starts index the selected level; direct array URLs fix the level.",
+    "Binary reference selection uses connected components, not guaranteed physical-sheet identities.",
+    "Automatic co-trained foreground loading is implemented through the existing strict joint loader; the new end-to-end comparison used released 0058/0022."
+  ],
+  "files_sha256": {
+    "README.md": "3728dcf8b4b4fe9612511643e0924b04ee4f4f71aa0713a0dbc20a512a1a188d",
+    "docs/INTERACTIVE_INFERENCE.md": "5a45d825cbe967f1434c77fa4d08adee176e717833ee52c1005914b02b21b110",
+    "requirements-viewer.txt": "69532c06842cc0e6afe277c5c222e178efe2282cdcb00efdace80610e73622e9",
+    "tools/check_interactive_browser.py": "baaa3f24de80da8bb9b0d4ff4d9d8d6c2c181dab1c091dfea9534961ab3858da",
+    "tools/check_viewer_extensions.py": "62b8a75862112048932a260aa567e1ab356e5f3fb2fdcf99c6a01205bab8d0b7",
+    "tests/test_viewer_formats.py": "5eb97ac801fa274cba8b54ce22a1afc141636acf2514c5fd76889767a95873f7",
+    "src/vesuvius_p2sd/interactive/core.py": "4a6b9e1af32d3ad060f86477ca6a80c83e22e4695ed1b2b7b039c6ebc7f86ca0",
+    "src/vesuvius_p2sd/interactive/server.py": "86610c188e406127758ebeb7692d0f7d08ca7e0c1a3b742ce6e4b5148d1caf44",
+    "src/vesuvius_p2sd/interactive/inputs.py": "f3a4e40f946fad344b1622e23b87cdf4e23028105c2f040b0cf04e78570339a5",
+    "src/vesuvius_p2sd/interactive/exports.py": "ec6ce8ff914e45d910354b49f069cc3b7e3905c068401bb92cff656e8d9cb876",
+    "src/vesuvius_p2sd/interactive/static/app.js": "0dabd991eb55bf2d31f12a8e24b160609987ad4a8447573fbae2553e4a26578e",
+    "src/vesuvius_p2sd/interactive/static/scene.js": "cc7d165a85994b452ced534591c862aad4ef82d766cf8b045ba516889b2e4578",
+    "src/vesuvius_p2sd/interactive/static/index.html": "31930c80b2fae54f12c6e13eb1b3b5c1f98b37918bc37574f3d00d5628a79261",
+    "src/vesuvius_p2sd/interactive/static/style.css": "c23dec9dff7fb3998b13001e94b4141cfa9e3d5e806b29e89856c0979680eab6"
+  }
+}

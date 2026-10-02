@@ -13,7 +13,11 @@
     <header>
       <div class="brand">PLatS <span>Interactive sheets</span></div>
       <div id="status" role="status">Connecting…</div>
-      <button id="export">Export NIFTIs</button>
+      <select id="export-format" aria-label="Export format">
+        <option value="both">NIFTI + TIFF</option>
+        <option value="tiff">TIFF</option>
+        <option value="nifti">NIFTI</option></select
+      ><button id="export">Export results</button>
     </header>
     <main>
       <aside>
@@ -24,16 +28,59 @@
           <details>
             <summary>Open another crop</summary>
             <label
-              >Image path on server<input
-                id="image-path"
-                type="text"
-                placeholder="/path/to/image.npy" /></label
-            ><label
-              >Reference path (optional)<input
-                id="gt-path"
-                type="text"
-                placeholder="/path/to/gt.nii.gz" /></label
-            ><button id="load">Open crop</button>
+              >Source<select id="input-source">
+                <option value="local">Local file / challenge TIFF</option>
+                <option value="zarr">Official CT Zarr URL</option>
+              </select></label
+            >
+            <div id="local-inputs">
+              <label
+                >Image path on server<input
+                  id="image-path"
+                  type="text"
+                  placeholder="/path/to/case.tif"
+              /></label>
+              <label
+                >Reference path (optional)<input
+                  id="gt-path"
+                  type="text"
+                  placeholder="/path/to/gt.tif"
+              /></label>
+              <label
+                >Reference type<select id="reference-kind">
+                  <option value="instances">Sheet instance IDs</option>
+                  <option value="challenge">Challenge: 0 BG / 1 sheet / 2 ignore</option>
+                  <option value="binary">Binary: positive = sheet</option>
+                </select></label
+              >
+              <p class="subtle">
+                Challenge TIFF: Z/Y/X pages. NPY and NIFTI: X/Y/Z model axes. CT must be uint8.
+              </p>
+            </div>
+            <div id="zarr-inputs" hidden>
+              <label
+                >OME-Zarr root or array URL<input
+                  id="zarr-url"
+                  type="url"
+                  placeholder="https://…/volume.zarr"
+              /></label>
+              <div class="xyz-inputs">
+                <label>Start X<input id="start-x" type="number" min="0" step="1" value="0" /></label
+                ><label
+                  >Start Y<input id="start-y" type="number" min="0" step="1" value="0" /></label
+                ><label
+                  >Start Z<input id="start-z" type="number" min="0" step="1" value="0"
+                /></label>
+              </div>
+              <label
+                >Resolution level<input id="zarr-level" type="number" min="0" step="1" value="0"
+              /></label>
+              <p class="subtle">
+                Loads a 320³ patch. Starts are voxel indices at the selected level; a URL ending in
+                /0 fixes that level.
+              </p>
+            </div>
+            <button id="load">Open crop</button>
           </details>
         </section>
         <section>
@@ -55,7 +102,38 @@
           <div id="timing" class="subtle"></div>
         </section>
         <section>
+          <h2>Automatic instances</h2>
+          <button id="automatic" class="primary">Segment all sheets</button>
+          <p class="subtle" id="automatic-info">
+            Foreground → 512 seeds → latent clustering → sheet decoding
+          </p>
+          <label class="check"
+            ><input id="automatic-overlay" type="checkbox" checked /> Automatic labels on
+            slices</label
+          >
+          <label
+            >Inspect instance<select id="automatic-id" disabled>
+              <option value="0">Run segmentation first</option>
+            </select></label
+          >
+          <label class="check"
+            ><input id="automatic-3d" type="checkbox" checked /> Selected automatic instance in
+            3D</label
+          >
+        </section>
+        <section>
           <h2>Display</h2>
+          <label
+            >Layout<select id="layout">
+              <option value="three">Three slices + 3D</option>
+              <option value="0">One slice: X / axis 0</option>
+              <option value="1">One slice: Y / axis 1</option>
+              <option value="2">One slice: Z / axis 2</option>
+            </select></label
+          >
+          <label class="check"
+            ><input id="show-3d-panel" type="checkbox" checked /> Show 3D panel</label
+          >
           <label>CT window <span id="window-value"></span></label>
           <div class="range-pair">
             <input
@@ -82,6 +160,15 @@
           <label class="check"
             ><input id="show-gt" type="checkbox" /> Reference contours <i class="gt-swatch"></i
           ></label>
+          <label
+            >Reference sheet<select id="reference-id" disabled>
+              <option value="0">No reference loaded</option>
+            </select></label
+          >
+          <label class="check"
+            ><input id="reference-3d" type="checkbox" disabled /> Selected reference in 3D
+            <i class="gt-swatch"></i
+          ></label>
           <label class="check"><input id="planes" type="checkbox" checked /> CT planes in 3D</label>
           <label class="check"
             ><input id="surfaces" type="checkbox" checked /> Predicted surfaces in 3D</label
@@ -100,7 +187,7 @@
           <p><strong>3D:</strong> drag to rotate, right-drag to pan, wheel to zoom.</p>
           <p>
             Only points on the exact displayed plane are drawn. Coordinates follow the input array
-            axes; no mirroring or reorientation is applied.
+            axes X/Y/Z; TIFF pages are converted from Z/Y/X.
           </p>
         </section>
       </aside>

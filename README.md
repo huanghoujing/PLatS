@@ -69,9 +69,13 @@ not a best-performing sheet. Saved expected outputs expose its reconstruction er
 [Launch the browser viewer](docs/INTERACTIVE_INFERENCE.md) for three linked
 orthogonal CT slices, click-to-prompt sheet decoding, and rotatable 3D surfaces.
 The GPU server caches CT features across clicks. Separate colored sheets,
-reference contours, and NIFTI export are included.
+reference-sheet 3D comparison, enlarged single-slice layouts, and automatic
+instance segmentation are included. Load challenge TIFFs or a 320³ region from
+an official CT Zarr URL using starting XYZ coordinates. Export NIFTI or losslessly
+compressed TIFF labels in challenge ZYX order.
 
 ```bash
+python -m pip install -r requirements-viewer.txt
 python viewer.py --image examples/sample_00860/image.npy \
   --gt examples/sample_00860/gt_instances.npy --device cuda:0 --port 8787
 # On your local computer:

@@ -374,3 +374,52 @@ summary {
     display: none;
   }
 }
+
+/* Focus one slice without reducing its underlying voxel resolution. */
+[hidden] {
+  display: none !important;
+}
+select,
+input[type="number"],
+input[type="url"] {
+  width: 100%;
+  background: #0b1420;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 7px;
+  color: var(--text);
+  margin: 6px 0;
+  font: inherit;
+  font-size: 12px;
+}
+header select {
+  width: 135px;
+}
+.xyz-inputs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+.workspace.focus {
+  grid-template-columns: minmax(0, 1.6fr) minmax(250px, 1fr);
+  grid-template-rows: 1fr;
+}
+.workspace.focus.no-3d {
+  grid-template-columns: 1fr;
+}
+.workspace:not(.focus).no-3d {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: 1fr;
+}
+#automatic-info {
+  margin-bottom: 6px;
+}
+@media (max-width: 900px) {
+  .workspace.focus {
+    grid-template-columns: 1fr;
+    grid-template-rows: 2fr 1fr;
+  }
+  .workspace.focus.no-3d {
+    grid-template-rows: 1fr;
+  }
+}

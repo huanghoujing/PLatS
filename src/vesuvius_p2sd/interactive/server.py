@@ -18,6 +18,7 @@ from urllib.parse import urlsplit
 import numpy as np
 
 from .core import PromptEngine, export_session, load_crop, packed_mask, surface_bytes, validate_points
+from .inputs import load_zarr_crop
 
 STATIC = Path(__file__).with_name('static')
 
@@ -28,6 +29,9 @@ class App:
         self.token = secrets.token_urlsafe(24)
         self.generation = 1
         self.sheets, self.revisions, self.jobs = {}, {}, {}
+        self.automatic_result = None
+        self.automatic_revision = 0
+        self.surface_cache = {}
         self.lock = threading.RLock()
         self.worker = ThreadPoolExecutor(max_workers=1, thread_name_prefix='plats-inference')
         self.ready = 'Preparing model and CT features'
@@ -70,10 +74,21 @@ class App:
 
     def metadata(self):
         with self.lock:
+            reference = self.crop.get('reference')
+            ids, counts = (np.unique(reference, return_counts=True) if reference is not None else ([], []))
+            reference_ids = [dict(id=int(i), voxels=int(c)) for i, c in zip(ids, counts) if i > 0]
+            automatic = self.automatic_result
+            automatic_info = None
+            if automatic is not None:
+                auto_ids, auto_counts = np.unique(automatic['labels'], return_counts=True)
+                automatic_info = dict(revision=automatic['revision'], timings=automatic['timings'],
+                    instances=[dict(id=int(i), voxels=int(c)) for i, c in zip(auto_ids, auto_counts) if i > 0])
             return dict(shape=list(self.crop['image'].shape), path=self.crop['path'],
                 gt_path=self.crop['gt_path'], has_gt=self.crop['gt'] is not None,
                 generation=self.generation, ready=self.ready, device=self.engine.device_name,
-                coordinate_order='Native array axes 0 / 1 / 2 (no reorientation)',
+                coordinate_order='XYZ model/viewer; TIFF files use ZYX',
+                source=self.crop.get('source', {}), reference_kind=self.crop.get('reference_kind', 'instances'),
+                reference_ids=reference_ids, automatic=automatic_info,
                 model=self.engine.source.get('mode', 'loading'),
                 image_encodes=self.engine.encode_count,
                 sheets=[dict(id=k, points=s['points'], threshold=s['threshold'],
@@ -120,7 +135,63 @@ class App:
                         voxels=int(mask.sum()), triangles=int.from_bytes(mesh[4:8], 'little'), timings=timings)
         return self.submit('predict', run)
 
+    def automatic(self, payload):
+        with self.lock:
+            if payload['generation'] != self.generation:
+                raise ValueError('The crop changed; reload the viewer.')
+            generation, crop = self.generation, self.crop
+            self.automatic_revision += 1
+            revision = self.automatic_revision
+        def run():
+            def progress(message):
+                self.ready = message
+            result = self.engine.automatic(crop['image'], generation, progress)
+            result['revision'] = revision
+            with self.lock:
+                if generation != self.generation or revision != self.automatic_revision:
+                    return dict(discarded=True)
+                self.automatic_result = result
+                self.surface_cache = {k: v for k, v in self.surface_cache.items() if k[0] != 'automatic'}
+                self.ready = 'Automatic instances ready; CT context retained for prompting'
+            return self.metadata()
+        return self.submit('automatic', run)
+
+    def surface(self, payload):
+        kind, identity = payload['kind'], int(payload['id'])
+        if kind not in ('reference', 'automatic'):
+            raise ValueError('Choose a reference or automatic surface.')
+        with self.lock:
+            if payload['generation'] != self.generation:
+                raise ValueError('The crop changed; reload the viewer.')
+            if kind == 'reference':
+                labels = self.crop.get('reference')
+                revision = self.generation
+            else:
+                labels = self.automatic_result['labels'] if self.automatic_result is not None else None
+                revision = self.automatic_revision
+            if labels is None or identity <= 0 or not np.any(labels == identity):
+                raise ValueError('No voxels for the selected reference/instance ID.')
+            generation = self.generation
+            key = (kind, generation, revision, identity)
+        def run():
+            if key not in self.surface_cache:
+                mesh = surface_bytes(labels == identity)
+                with self.lock:
+                    if generation != self.generation:
+                        return dict(discarded=True)
+                    # Meshes are requested lazily, so a dense automatic volume
+                    # does not create every full-resolution surface at once.
+                    if len(self.surface_cache) >= 16:
+                        self.surface_cache.pop(next(iter(self.surface_cache)))
+                    self.surface_cache[key] = mesh
+            return dict(key='/'.join(map(str, key)), triangles=int.from_bytes(self.surface_cache[key][4:8], 'little'))
+        return self.submit('surface', run)
+
     def mutate(self, path, payload):
+        if path == '/api/automatic':
+            return self.automatic(payload)
+        if path == '/api/surface':
+            return self.surface(payload)
         if path == '/api/predict':
             return self.predict(payload)
         if path == '/api/delete':
@@ -133,10 +204,18 @@ class App:
             return dict(deleted=sheet_id)
         if path == '/api/load':
             def load():
-                crop = load_crop(str(payload['image']), str(payload.get('gt', '')))
+                if payload.get('source') == 'zarr':
+                    crop = load_zarr_crop(payload['url'], payload['start_xyz'],
+                        level=payload.get('level', 0), cache_dir=self.output.parent / 'zarr_cache')
+                else:
+                    crop = load_crop(str(payload['image']), str(payload.get('gt', '')),
+                                     payload.get('reference_kind', 'instances'))
                 with self.lock:
                     self.crop = crop
                     self.generation += 1
+                    self.automatic_result = None
+                    self.automatic_revision += 1
+                    self.surface_cache.clear()
                     self.sheets.clear()
                     self.revisions.clear()
                     self.ready = 'Encoding the new CT crop'
@@ -148,19 +227,27 @@ class App:
             # unsubmitted prompts must never be paired with an older mask.
             with self.lock:
                 expected = {int(k): int(v) for k, v in payload['revisions'].items()}
-                if payload['generation'] != self.generation or not expected:
-                    raise ValueError('Decode at least one sheet before exporting.')
+                auto_revision = payload.get('automatic_revision')
+                automatic = self.automatic_result if auto_revision is not None else None
+                if payload['generation'] != self.generation or (not expected and automatic is None):
+                    raise ValueError('Decode a sheet or run automatic segmentation before exporting.')
+                if auto_revision is not None and (automatic is None or automatic['revision'] != auto_revision):
+                    raise ValueError('Automatic predictions changed; refresh before exporting.')
                 if any(k not in self.sheets or self.sheets[k]['revision'] != v for k, v in expected.items()):
                     raise ValueError('Predictions changed; wait for decoding before exporting.')
                 crop = self.crop
                 sheets = {k: self.sheets[k] for k in expected}
             folder = self.output / (datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S_') + secrets.token_hex(3))
-            return self.submit('export', lambda: dict(path=export_session(folder, crop, sheets, self.engine.source)))
+            formats = payload.get('formats', ['nifti'])
+            if not formats or any(f not in ('nifti', 'tiff') for f in formats):
+                raise ValueError('Choose NIFTI, TIFF, or both export formats.')
+            return self.submit('export', lambda: dict(path=export_session(folder, crop, sheets,
+                self.engine.source, formats=formats, automatic=automatic)))
         raise KeyError(path)
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = 'PLatSViewer/1'
+    server_version = 'PLatSViewer/2'
 
     def log_message(self, fmt, *args):
         # Polling/slice access is frequent; keep the terminal readable.
@@ -202,8 +289,24 @@ class Handler(BaseHTTPRequestHandler):
                         if array is None:
                             raise ValueError('No reference volume loaded.')
                         return self.send(array.tobytes(), 'application/octet-stream')
+                    if path == '/api/reference':
+                        labels = app.crop.get('reference')
+                        if labels is None:
+                            raise ValueError('No reference labels loaded.')
+                        return self.send(labels.astype('<u4').tobytes(), 'application/octet-stream')
+                    if path == '/api/automatic-labels':
+                        if app.automatic_result is None:
+                            raise ValueError('Run automatic segmentation first.')
+                        return self.send(app.automatic_result['labels'].astype('<u2').tobytes(), 'application/octet-stream')
+                    if path.startswith('/api/surface/'):
+                        _, _, _, kind, generation, revision, identity = path.split('/')
+                        key = (kind, int(generation), int(revision), int(identity))
+                        return self.send(app.surface_cache[key], 'application/octet-stream')
                     if path.startswith('/api/jobs/'):
-                        return self.send(app.jobs[path.rsplit('/', 1)[1]])
+                        job = dict(app.jobs[path.rsplit('/', 1)[1]])
+                        if job['kind'] == 'automatic':
+                            job['message'] = app.ready
+                        return self.send(job)
                     if path.startswith(('/api/mask/', '/api/mesh/')):
                         _, _, kind, key = path.split('/')
                         return self.send(app.sheets[int(key)][kind], 'application/octet-stream')
@@ -240,7 +343,12 @@ class Handler(BaseHTTPRequestHandler):
 
 def main(repository_root):
     parser = argparse.ArgumentParser(description='PLatS interactive browser viewer (SSH port forwarding supported).')
-    parser.add_argument('--image', required=True, help='Preprocessed uint8 crop, each side 32–320; .npy/.nii[.gz]/.tif')
+    inputs = parser.add_mutually_exclusive_group(required=True)
+    inputs.add_argument('--image', help='Preprocessed uint8 crop; challenge TIFF is ZYX, NPY/NIFTI is XYZ')
+    inputs.add_argument('--zarr-url', help='Official CT OME-Zarr root or array URL')
+    parser.add_argument('--start-xyz', nargs=3, type=int, metavar=('X', 'Y', 'Z'), default=[0, 0, 0])
+    parser.add_argument('--level', type=int, default=0, help='Zarr resolution level (default 0)')
+    parser.add_argument('--reference-kind', choices=['instances', 'binary', 'challenge'], default='instances')
     parser.add_argument('--gt', default='', help='Optional aligned GT foreground/instance volume')
     parser.add_argument('--bundle-root', type=Path, default=repository_root, help='Extracted release with configs/ and weights/')
     parser.add_argument('--run-dir', type=Path, help='Optional jointly trained P2SD run instead of release weights')
@@ -249,16 +357,35 @@ def main(repository_root):
     parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--threads', type=int, default=4)
     parser.add_argument('--port', type=int, default=8787)
+    parser.add_argument('--token-file', type=Path, help='Private token file to retain the URL across restarts')
     parser.add_argument('--output', type=Path, default=Path(repository_root) / 'outputs/interactive')
     args = parser.parse_args()
     if args.checkpoint_dir and not args.run_dir:
         parser.error('--checkpoint-dir requires --run-dir')
     if not 1 <= args.threads <= 64:
         parser.error('--threads must be 1–64')
-    crop = load_crop(args.image, args.gt)
+    if args.zarr_url:
+        if args.gt:
+            parser.error('--gt is currently for local crops; load aligned local CT/reference to compare a sheet')
+        crop = load_zarr_crop(args.zarr_url, args.start_xyz, level=args.level,
+                              cache_dir=args.output.parent / 'zarr_cache')
+    else:
+        crop = load_crop(args.image, args.gt, args.reference_kind)
     engine = PromptEngine(args.training_root, args.bundle_root, args.device,
                           args.run_dir, args.checkpoint_dir, args.threads)
     app = App(engine, crop, args.output)
+    if args.token_file:
+        if args.token_file.exists():
+            token = args.token_file.read_text().strip()
+            if len(token) < 32:
+                parser.error('--token-file must contain a token of at least 32 characters')
+            app.token = token
+        else:
+            import os
+            args.token_file.parent.mkdir(parents=True, exist_ok=True)
+            descriptor = os.open(args.token_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            with os.fdopen(descriptor, 'w') as stream:
+                stream.write(app.token)
     server = ThreadingHTTPServer(('127.0.0.1', args.port), Handler)
     server.daemon_threads = True
     server.app = app

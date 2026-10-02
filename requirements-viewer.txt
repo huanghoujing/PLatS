@@ -1,0 +1,4 @@
+# Install after the core requirements; these add remote HTTP Zarr and TIFF codecs.
+fsspec==2026.4.0
+aiohttp==3.14.3
+imagecodecs==2026.8.16

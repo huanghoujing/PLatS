@@ -54,7 +54,7 @@ async def main():
   await page.wait_for_function('window.platsDiagnostics().sheets[0].revision >= 2 && !window.platsDiagnostics().busy',timeout=120000)
   assert '0.00s' in await page.locator('#timing').inner_text()
   await page.locator('#export').click()
-  await page.wait_for_function('document.querySelector("#status").textContent === "NIFTI export complete"',timeout=120000)
+  await page.wait_for_function('document.querySelector("#status").textContent === "Export complete"',timeout=120000)
   exported=await page.locator('#notice').inner_text()
   await page.locator('#notice').click()
   # Second sheet coexists with the first, with shared image context.
