@@ -46,10 +46,13 @@ sheet prediction, and $\mathbf1$ the indicator function.
 We train code prediction with MSE against the frozen AE's clean-sheet code;
 normalization is omitted here for clarity and defined in Supplementary.
 Same-sheet and different-sheet losses encourage consistent instance identity.
-A binary decoder $B$ shares the CT encoder and uses skip connections to
-predict the union of sheets, supervised by BCE and Dice (Fig.~\ref{fig:training}).
+A binary decoder $B$ shares the CT encoder and image context, then upsamples
+to predict the sheet union, supervised by BCE and Dice (Fig.~\ref{fig:training}).
 The AE remains frozen, and the main point-to-sheet model needs no decoded
 occupancy loss during training.
+Prompt conditioning and latent prediction operate on a $10^3$ grid for a
+$320^3$ crop; full sheet decoding is deferred until a mask is needed.
+Supplementary details the modules, supervision and computational scope.
 
 \begin{figure*}[t]
  \centering\includegraphics[width=\textwidth]{figures/training.pdf}

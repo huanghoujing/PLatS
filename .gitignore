@@ -6,3 +6,12 @@ __pycache__/
 .venv/
 outputs/
 *.egg-info/
+
+# Local training outputs and datasets.
+runs_from_260914/
+datasets/
+report/*.log
+report/*.aux
+report/*.bbl
+report/*.blg
+report/*.out

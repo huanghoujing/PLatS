@@ -1,0 +1,32 @@
+{
+  "cli_ast_unchanged": true,
+  "loss_ast_unchanged": true,
+  "old_import_paths_preserved": true,
+  "original_trainer_comments_preserved": true,
+  "identity_loss_grouping_and_gradient_check": "passed",
+  "data_conversion_repair_ignore_check": "3 synthetic cases passed",
+  "model_sources_unchanged": true,
+  "sparse_ae_encoder_retained": true,
+  "training_check": {
+    "status": "passed",
+    "steps_per_stage": 2,
+    "crop": [
+      64,
+      64,
+      64
+    ],
+    "device": "cpu",
+    "output": "/tmp/plats-train-check-1cz8i8nw",
+    "scope": "synthetic scratch optimization; not convergence or GPU performance"
+  },
+  "paper": {
+    "pages": 14,
+    "main_pages": 4,
+    "architecture_png_pdf_svg": "generated and visually inspected",
+    "latex_errors": 0,
+    "overfull_boxes": 0,
+    "pdf_sha256": "df4a6130089fdb44ddc1a0ade9345ff46b7de2a58a29034ca18b804f7af0350e"
+  },
+  "deletions": "No model module or loss deleted; proposed removal list awaits review.",
+  "cpu_check_scope": "Two optimization steps per stage on synthetic 64^3 crops; no full training or CUDA benchmark."
+}

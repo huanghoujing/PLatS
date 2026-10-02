@@ -1,0 +1,10 @@
+# Retained for future encoder-efficiency experiments; requires torchsparse/CUDA.
+# This changes the encoder, so train a new AE and recompute latent statistics.
+_base_: ae_scratch.yaml
+run:
+  run_id: ae_sparse_scratch
+model:
+  encoder: torchsparse_aniso_unet
+  sparse_encoder:
+    norm: rms
+    stage_res_blocks: [1, 1, 1, 2, 2, 2]

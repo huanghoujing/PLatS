@@ -1,0 +1,173 @@
+# Random initialization; the reference AE architecture and objectives.
+run:
+  output_root: runs_from_260914/training
+  run_id: ae_scratch
+model:
+  type: sheet_autoencoder
+  encoder: dense_stage_matched_aniso_unet
+  in_channels: 1
+  out_channels: 1
+  channels:
+  - 8
+  - 16
+  - 24
+  - 32
+  - 48
+  - 64
+  latent_channels: 64
+  latent_noise_std: 0.02
+  downsample_factor: 32
+  task_heads:
+    occupancy_decoder:
+      enabled: true
+    distance_field_decoder:
+      enabled: true
+    coordinate_distance_query:
+      enabled: true
+      hidden_dim: 128
+    occupancy_deep_supervision:
+      enabled: true
+      stages:
+      - 0
+      - 1
+      - 2
+      - 3
+  enc_norm: rms
+  encoder_stage_res_blocks:
+  - 1
+  - 1
+  - 1
+  - 2
+  - 2
+  - 2
+  latent_noise_mode: mul_uniform
+  dense_encoder:
+    layout: stage_matched
+    norm: rms
+    stage_res_blocks:
+    - 1
+    - 1
+    - 1
+    - 2
+    - 2
+    - 2
+    downsample_mode: conv_mean_pool
+    stem: patchify
+    patch_size: 4
+    norm_grad_clamp: 10000.0
+  latent_projection: identity
+data:
+  dataset_root: datasets/vesuvius_train_t6
+  patch_size:
+  - 320
+  - 320
+  - 320
+  erased_border_width: 5
+  min_component_voxels: 1000
+  component_select_mode: random
+  patch_max_retries: 24
+  randomize_each_access: true
+  seed: 42
+  prompt:
+    num_positive_points: 1
+    num_negative_points: 0
+  distance_target_backend: cpu_scipy
+  distance_field:
+    enabled: true
+    clip_voxels: 16
+    target_mode: unsigned
+  query_distance:
+    enabled: true
+    num_points: 8192
+    band_voxels: 8
+    sampling: balanced_regions
+    inside_fraction: 0.3333333333333333
+    near_outside_fraction: 0.3333333333333333
+  same_case_pair_batches: true
+  input_corruption:
+    enabled: true
+    apply_prob: 0.7
+    holes:
+      count_range:
+      - 1
+      - 6
+      radius_range:
+      - 2.0
+      - 10.0
+    dropout:
+      prob_range:
+      - 0.0
+      - 0.3
+    min_survive_fraction: 0.25
+training:
+  batch_size: 3
+  num_workers: 4
+  persistent_workers: true
+  prefetch_factor: 2
+  epochs: 150
+  max_steps: -1
+  lr: 5.0e-05
+  weight_decay: 0.01
+  amp_dtype: bfloat16
+  channels_last_3d: true
+  cudnn_benchmark: false
+  matmul_precision: high
+  log_interval_epochs: 1
+  eval_interval_epochs: 5
+  save_interval_epochs: 1
+  save_epoch_checkpoints: true
+  grad_clip: 1.0
+  cudnn_deterministic: true
+  cudnn_enabled: true
+  nonfinite_gradient_policy: fail
+  nonfinite_gradient_max_skips: 0
+  save_on_last_step: true
+  eval_on_last_step: true
+optimizer:
+  name: adamw
+  lr: 5.0e-05
+  weight_decay: 0.01
+  schedule:
+    name: cosine
+    warmup_steps: 300
+    min_lr_scale: 0.0
+loss:
+  bce_weight: 1.0
+  dice_weight: 1.0
+  pos_weight: auto
+  max_auto_pos_weight: 20
+  outside_dilation_weight: 0.05
+  outside_dilation_tolerance: 2
+  border_weight: 0.05
+  distance_weight: 0.15
+  query_distance_weight: 0.15
+  distance_smooth_l1_beta: 0.1
+  deep_supervision:
+    weights:
+    - 0.125
+    - 0.25
+    - 0.5
+    - 0.5
+  same_volume_latent_repulsion:
+    weight: 0.1
+    margin: 0.5
+metrics:
+  threshold: 0.5
+  tolerance_voxels:
+  - 1
+  - 2
+  distance_backend: cpu_scipy
+  erased_border_width: 5
+  eval_batches: 4
+  parallel_workers: 4
+  worst_gallery_k: 0
+visualization:
+  save_png: false
+  save_3d: true
+  save_3d_on_milestones_only: false
+  keep_latest_val_3d: 2
+  save_train_3d: false
+seed: 42
+device: cuda
+logging:
+  print_model: false

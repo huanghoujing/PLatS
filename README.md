@@ -10,6 +10,12 @@ It includes actual inference weights, not links into the original workspace.
 Use the [complete reproduction archive](https://github.com/huanghoujing/PLatS/releases/download/v0.1.0-progress-prize/PLatS_progress_prize.tar.gz): it includes the weights and example arrays omitted from Git.
 The [release page](https://github.com/huanghoujing/PLatS/releases/tag/v0.1.0-progress-prize) also provides its SHA256 checksum.
 
+On `make_idea_clear`, start with the [architecture and efficiency guide](docs/ARCHITECTURE.md),
+[training-from-scratch instructions](docs/TRAINING.md), and
+[code review map and proposed removals](docs/CODE_REVIEW.md).
+The release archive is the frozen submission version; it does not contain these
+branch updates. No released weights are needed for the new scratch-training path.
+
 ```bash
 curl -fL -O https://github.com/huanghoujing/PLatS/releases/download/v0.1.0-progress-prize/PLatS_progress_prize.tar.gz
 curl -fL -O https://github.com/huanghoujing/PLatS/releases/download/v0.1.0-progress-prize/PLatS_progress_prize.tar.gz.sha256
@@ -116,12 +122,13 @@ physical scanner coordinates require the original volume metadata.
 The small example reproduces the central inference and scoring path. Full 106-case
 results require the remaining released data; the example does not reproduce their
 aggregate by itself. Evidence manifests identify those cases and prompt sets.
-The original training configurations record historical warm starts and dataset
-paths. They are archival records, not portable one-command training recipes;
-retraining requires the repaired training dataset and initialization lineage.
-Training entry points are `vesuvius_p2sd.train.train_ae`, `train_p2sd`, and
-`train_binary_seg`, each taking `--config_path`. The supplied inference configs
-are deliberately separate from these historical training configs.
+For a new model, follow [training from scratch](docs/TRAINING.md): prepare and
+repair training labels, train the AE, compute its latent statistics, then train
+P2SD with its joint binary branch. Portable recipes are in `configs/training/`.
+The sparse AE encoder is retained with an optional training config. This new
+recipe has passed a short synthetic optimization check; full training accuracy
+has not been measured. The historical configs in `provenance/` record the
+warm starts that produced the released checkpoints.
 
 The report's large-page PNGs are frozen evidence. Core mesh/ink modules are included,
 but reproducing page growth additionally requires the scroll volume, ink checkpoint
