@@ -1,0 +1,20 @@
+\begin{table*}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lrrrrrrrrrr}
+\toprule
+ & \multicolumn{4}{c}{Original ignore erasure} & \multicolumn{4}{c}{Restoration diagnostic} & \multicolumn{2}{c}{Before ignore} \\
+Method & SD$_2$ & Topo & VOI & LB & SD$_2$ & Topo & VOI & Formula & Mean $b_1$ & Mean $b_2$ \\
+\midrule
+Winner & 0.8799 & 0.3769 & 0.5616 & 0.6176 & 0.8078 & 0.5694 & 0.5719 & 0.6537 & 40.302 & 0.000 \\
+Winner + close + dust & 0.8798 & 0.3770 & 0.5616 & 0.6176 & 0.8078 & 0.5727 & 0.5720 & 0.6547 & 37.453 & 0.057 \\
+PLatS & 0.7494 & 0.2644 & 0.5396 & 0.5305 & 0.7120 & 0.5820 & 0.5390 & 0.6124 & 34.849 & 7.972 \\
+PLatS + AE & 0.7487 & 0.2680 & 0.5393 & 0.5312 & 0.7103 & 0.5917 & 0.5386 & 0.6146 & 24.321 & 4.877 \\
+PLatS + AE + close & 0.7487 & 0.2741 & 0.5393 & 0.5330 & 0.7103 & 0.6361 & 0.5386 & 0.6279 & 23.321 & 4.802 \\
+PLatS + repair & 0.7487 & 0.2742 & 0.5393 & 0.5331 & 0.7103 & 0.6364 & 0.5386 & 0.6280 & 23.321 & 4.802 \\
+\bottomrule
+\end{tabular}
+\caption{Fixed postprocessing ablation on all 106 cases. AE is the existing 0032 model; close denotes guarded per-ID closing; dust removes six-connected pieces of at most five voxels. The final PLatS repair row includes all three steps. Winner cleanup uses its pre-cleanup six-connected components as ID proxies. The 5,000-voxel whole-ID gate applies only in the restoration diagnostic.}
+\label{tab:postprocessing}
+\end{table*}

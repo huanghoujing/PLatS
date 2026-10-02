@@ -238,23 +238,51 @@ results average sheets within each case and resample 106 cases 2,000 times
 (seed 42); source files preserve all intervals. Spatial dependence and prior
 inspection limit their statistical interpretation.
 
-\paragraph{Raw automatic union census.}
-Table~\ref{tab:rawpredbetti} uses the winner's saved binary mask and the union
-of automatic 0058 instance IDs, exactly as supplied to the original-erasure
-comparison. This differs from the GT-prompted sheet/union census above.
-We recompute all 212 native volumes without loading GT or ignore arrays,
-excluding no region and applying no additional component filter. Existing
-inference cleanup remains part of each method's prediction.
-
+\paragraph{Topology before ignore processing.}
+Table~\ref{tab:rawpredbetti} retains the winner's original binary mask and the
+base automatic 0058 union, and adds the repaired output. The original census
+recomputed 212 native volumes and matched the prior hashes and counts.
+All new postprocessing stages are counted before loading GT or ignore arrays.
+Inference cleanup is included; evaluation erasure, restoration and the
+5,000-voxel whole-instance gate are excluded from these topology counts.
 Under V construction, $b_0$ counts six-connected foreground components and
-$b_2$ counts enclosed 26-connected background components; outside the crop is
-background. With Euler characteristic $\chi$, the tunnel count is
-$b_1=b_0+b_2-\chi$. All counts agree with the previous per-case raw audit,
-and all prediction hashes match their inference freezes. PLatS has nonzero
-$b_2$ in 31 of 106 cases (845 cavities in total); the winner has none. Means
-and medians expose this uneven distribution. The standalone census script is
-included with the report; per-case counts and input hashes are retained in
-the local experiment record.
+$b_2$ enclosed 26-connected background components; outside the crop is
+background. With Euler characteristic $\chi$, $b_1=b_0+b_2-\chi$.
+Mean and median counts are equal-case summaries, distinct from matched TopoScore.
+
+\paragraph{Fixed postprocessing ablation.}
+Table~\ref{tab:postprocessing} evaluates all 106 cubes at each step. We encode
+and decode each existing 0058 instance with the frozen 0032 epoch-150 AE,
+threshold occupancy strictly above 0.5, and assign overlap voxels to the
+highest reconstruction probability (ties favor the lower original ID).
+The four native $256^3$ crops are centered in $320^3$ for AE inference and
+cropped back; the other 102 crops remain $320^3$. No GT or ignore masks enter
+inference. Retained instances keep their original ID labels.
+This optional repair adds an AE encoding/decoding pass per retained ID;
+shared CT features and seed clustering remain unchanged.
+
+Closing is additive and applied per ID in ascending order, with $3^3$ then
+$5^3$ cubic kernels. Already $(1,0,0)$ masks are skipped. Each candidate is
+accepted only if it reduces $b_0+b_1+b_2$ or reaches $(1,0,0)$; new voxels
+that overlap or 26-touch another current ID are forbidden. This is a local
+heuristic, not a geometry or topology guarantee. Dusting then removes
+six-connected pieces of at most five voxels per ID. This small-piece rule
+differs from the restoration diagnostic's full-ID 5,000-voxel gate.
+The winner control applies identical closing and dusting to its original
+six-connected components; these are proxies for sheet identity.
+
+The recipe was fixed after inspecting three released-test outliers, so this
+extension is exploratory rather than a fresh blind evaluation. The historical
+AE checkpoint comparison did not select the main repair model: we retained
+0032, which already supplies the 0058 sheet decoder. GPU~0 and GPU~2 generated
+the outputs; exact CPU scoring reuses byte-identical prediction/GT pairs.
+All 424 new stage/case outputs were frozen before scoring. Original table rows
+and the original result snapshot are retained. Aggregate results, reproduction
+scripts and a revision audit accompany the report; per-case arrays and hashes
+remain in the local experiment record. This ablation separates postprocessing
+steps, not the causal contribution of AE training losses or architecture.
+
+\input{tables/postprocessing_ablation}
 
 \section{Restoration controls and failure provenance}
 Preserve each predicted identity \emph{before} erasure. Let $A_i$ be its full

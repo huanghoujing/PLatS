@@ -1,0 +1,78 @@
+{
+  "status": "passed",
+  "created_utc": "2026-10-02T20:25:24.825742+00:00",
+  "base_commit": "042f1ddf9b80956cba3e22601f09f1bc3cb38a74",
+  "pages": {
+    "main": 6,
+    "references": 1,
+    "supplementary": 11,
+    "total": 18
+  },
+  "table_pages": {
+    "1": 3,
+    "2": 4,
+    "3": 4
+  },
+  "cases": 106,
+  "new_prediction_volumes": 424,
+  "logical_new_scores": 848,
+  "unique_exact_scores": 511,
+  "scoring_workers": 96,
+  "gpu_indices": [
+    0,
+    2
+  ],
+  "recipe": {
+    "ae": "0032 epoch150; encode and decode each existing 0058 instance",
+    "threshold": 0.5,
+    "threshold_comparison": "strictly greater",
+    "precision": "bfloat16",
+    "native_padding": "Center-pad 256 cubes to 320, then crop back; 320 cubes unchanged",
+    "overlaps": "Highest AE probability, ties lower original ID",
+    "closing": "Per original ID, additive guarded 3^3 then 5^3; accept reduced sum of V Betti counts; skip (1,0,0)",
+    "closing_guard": "Forbid new voxels overlapping or 26-touching another ID; sequential ascending IDs",
+    "dust_max_voxels": 5,
+    "dust_connectivity": 6,
+    "restoration_full_instance_min_voxels": 5000
+  },
+  "implementation_checks": {
+    "guarded_close_matches_existing": true,
+    "unchanged_case_score_max_error": 0.0,
+    "restoration_mask_checks": 8,
+    "restoration_masks_all_exact": true,
+    "inference_script_sha256": "a109015e2f8185ec2ec73a50746f891ababc209ad3ee62e298c9777f85f6222e",
+    "current_driver_sha256": "2c6a917fedc9eb15b54d21e953ac55d1760fad9bb076983f18ed94630d32fe7c"
+  },
+  "checks": {
+    "all_new_prediction_hashes_verified": true,
+    "original_rows_unchanged": true,
+    "original_results_snapshot_unchanged": true,
+    "ae_checkpoint_unchanged": true,
+    "no_post_inference_algorithm_changes": true,
+    "latex_errors": 0,
+    "undefined_references": 0,
+    "overfull_boxes": 0,
+    "pdf_word_bounds_valid": true,
+    "type3_fonts_unchanged_from_baseline": true,
+    "tables_visually_reviewed": true,
+    "source_arrays_remain_local": true
+  },
+  "existing_pdf_limitations": {
+    "type3_font_count": 6,
+    "note": "Six Type 3 fonts remain in unchanged legacy figure assets."
+  },
+  "files_sha256": {
+    "README.md": "a3284d0a9aa75f35897a1868fa2661ba9aa1f73e2aa81e158d4fdbe2b84d3321",
+    "index.html": "9079628f38e822dee436d32cdaf7ea54fa3bd30f2ed0f574950cd2bc91cf8e04",
+    "evaluate_postprocessing.py": "2c6a917fedc9eb15b54d21e953ac55d1760fad9bb076983f18ed94630d32fe7c",
+    "export_results.py": "070c6a2261a4ffc19248a2eabf63f63353b29a19474bcc16a0fa71d0f1eec94e",
+    "postprocessing_results.json": "7e315585ad736f293b27f300139d61f2e89efef8d4cb0859326cd4ef17987be1",
+    "report.pdf": "d0c2186fcef4b1924d3b659417def4c7df1c1ec96ddd47549f0d8b407870e920",
+    "sections/experiments.tex": "bda6d0460b84aa5f89a1d0fbabef56ff338b75624f79ae91a57049e2c02a2746",
+    "sections/supplementary.tex": "6ce066db93ff168e4e555b88172b0dcaa683228b218a74c2f051ab1dfaffac85",
+    "tables/standard_lb.tex": "c0178227ae861218ba9f297b5a0eedb17627cddfaed67d8ffb1ed1bf37166eff",
+    "tables/modified_lb.tex": "8fca724563c50f29e1a623fa9a26f64fd5ef2c7bbef6792cab4fe91543202e90",
+    "tables/raw_prediction_betti.tex": "a8c649d0e50aeeb2bc49da104ba8b6579465bec1c548d39359d64cd4e3c7ffcb",
+    "tables/postprocessing_ablation.tex": "06d3ca4d93edd1766d65c46391e5cb3bbdb4fbb16ddbe04335786211e7afd429"
+  }
+}

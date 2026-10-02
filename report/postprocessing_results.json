@@ -1,0 +1,256 @@
+{
+  "status": "complete",
+  "cases": 106,
+  "means": {
+    "winner": {
+      "standard": {
+        "dice": 0.6014501695950853,
+        "surface_dice_tau2": 0.8799369710396249,
+        "toposcore": 0.3769467700215336,
+        "voi_score": 0.5615817645040069,
+        "leaderboard_formula_score": 0.6176155884467313
+      },
+      "restored_filtered": {
+        "dice": 0.5459686462527382,
+        "surface_dice_tau2": 0.8077504969895208,
+        "toposcore": 0.5693616148877242,
+        "voi_score": 0.5719161667727928,
+        "leaderboard_formula_score": 0.653691816783127
+      },
+      "raw_betti": {
+        "mean": [
+          13.235849056603774,
+          40.301886792452834,
+          0.0
+        ],
+        "median": [
+          13.0,
+          20.5,
+          0.0
+        ],
+        "total": [
+          1403,
+          4272,
+          0
+        ],
+        "nonzero_cases": [
+          106,
+          89,
+          0
+        ]
+      }
+    },
+    "winner_close_dust": {
+      "standard": {
+        "dice": 0.601371021884308,
+        "surface_dice_tau2": 0.879809827023258,
+        "toposcore": 0.3770235556641423,
+        "voi_score": 0.5615995644951615,
+        "leaderboard_formula_score": 0.6176003537306896
+      },
+      "restored_filtered": {
+        "dice": 0.545788733886068,
+        "surface_dice_tau2": 0.8077638460300673,
+        "toposcore": 0.5727491083270492,
+        "voi_score": 0.5719818453110721,
+        "leaderboard_formula_score": 0.6547357244675136
+      },
+      "raw_betti": {
+        "mean": [
+          13.235849056603774,
+          37.45283018867924,
+          0.05660377358490566
+        ],
+        "median": [
+          13.0,
+          17.5,
+          0.0
+        ],
+        "total": [
+          1403,
+          3970,
+          6
+        ],
+        "nonzero_cases": [
+          106,
+          88,
+          4
+        ]
+      }
+    },
+    "plats_base": {
+      "standard": {
+        "dice": 0.42616374215243197,
+        "surface_dice_tau2": 0.7493553660368991,
+        "toposcore": 0.26443163981667545,
+        "voi_score": 0.5396223674407822,
+        "leaderboard_formula_score": 0.530471698662191
+      },
+      "restored_filtered": {
+        "dice": 0.40456927623969396,
+        "surface_dice_tau2": 0.712023327126809,
+        "toposcore": 0.5819577624370438,
+        "voi_score": 0.5389859125525982,
+        "leaderboard_formula_score": 0.6124405626189056
+      },
+      "raw_betti": {
+        "mean": [
+          12.056603773584905,
+          34.84905660377358,
+          7.971698113207547
+        ],
+        "median": [
+          12.0,
+          2.5,
+          0.0
+        ],
+        "total": [
+          1278,
+          3694,
+          845
+        ],
+        "nonzero_cases": [
+          106,
+          79,
+          31
+        ]
+      }
+    },
+    "plats_ae": {
+      "standard": {
+        "dice": 0.42368994602383553,
+        "surface_dice_tau2": 0.7486971734102399,
+        "toposcore": 0.2679955486129584,
+        "voi_score": 0.539336311636494,
+        "leaderboard_formula_score": 0.5312103843502444
+      },
+      "restored_filtered": {
+        "dice": 0.4018700027912169,
+        "surface_dice_tau2": 0.7102817016028306,
+        "toposcore": 0.5916776410540114,
+        "voi_score": 0.5385538552290161,
+        "leaderboard_formula_score": 0.6145957372073498
+      },
+      "raw_betti": {
+        "mean": [
+          13.30188679245283,
+          24.32075471698113,
+          4.877358490566038
+        ],
+        "median": [
+          14.0,
+          1.0,
+          0.0
+        ],
+        "total": [
+          1410,
+          2578,
+          517
+        ],
+        "nonzero_cases": [
+          106,
+          64,
+          24
+        ]
+      }
+    },
+    "plats_ae_close": {
+      "standard": {
+        "dice": 0.4236894772039995,
+        "surface_dice_tau2": 0.748704740423283,
+        "toposcore": 0.2740834498886934,
+        "voi_score": 0.5393384282369765,
+        "leaderboard_formula_score": 0.5330401439976987
+      },
+      "restored_filtered": {
+        "dice": 0.4018687029876059,
+        "surface_dice_tau2": 0.7102891401281416,
+        "toposcore": 0.6360707263721777,
+        "voi_score": 0.5386010963972768,
+        "leaderboard_formula_score": 0.6279328006955497
+      },
+      "raw_betti": {
+        "mean": [
+          12.169811320754716,
+          23.32075471698113,
+          4.80188679245283
+        ],
+        "median": [
+          12.0,
+          0.0,
+          0.0
+        ],
+        "total": [
+          1290,
+          2472,
+          509
+        ],
+        "nonzero_cases": [
+          106,
+          45,
+          21
+        ]
+      }
+    },
+    "plats_ae_close_dust": {
+      "standard": {
+        "dice": 0.423689469462417,
+        "surface_dice_tau2": 0.7487046352160741,
+        "toposcore": 0.2741674100607099,
+        "voi_score": 0.539338426470444,
+        "leaderboard_formula_score": 0.5330652946084943
+      },
+      "restored_filtered": {
+        "dice": 0.4018686925843964,
+        "surface_dice_tau2": 0.7102890379756049,
+        "toposcore": 0.6364292320117132,
+        "voi_score": 0.5386010937180901,
+        "leaderboard_formula_score": 0.6280403156963072
+      },
+      "raw_betti": {
+        "mean": [
+          12.056603773584905,
+          23.32075471698113,
+          4.80188679245283
+        ],
+        "median": [
+          12.0,
+          0.0,
+          0.0
+        ],
+        "total": [
+          1278,
+          2472,
+          509
+        ],
+        "nonzero_cases": [
+          106,
+          45,
+          21
+        ]
+      }
+    }
+  },
+  "recipe": {
+    "ae": "0032 epoch150; encode and decode each existing 0058 instance",
+    "threshold": 0.5,
+    "threshold_comparison": "strictly greater",
+    "precision": "bfloat16",
+    "native_padding": "Center-pad 256 cubes to 320, then crop back; 320 cubes unchanged",
+    "overlaps": "Highest AE probability, ties lower original ID",
+    "closing": "Per original ID, additive guarded 3^3 then 5^3; accept reduced sum of V Betti counts; skip (1,0,0)",
+    "closing_guard": "Forbid new voxels overlapping or 26-touching another ID; sequential ascending IDs",
+    "dust_max_voxels": 5,
+    "dust_connectivity": 6,
+    "restoration_full_instance_min_voxels": 5000
+  },
+  "limitations": [
+    "Recipe selected after inspecting three released-test outliers; not a fresh blind evaluation.",
+    "Winner identities are pre-cleanup six-connected components, not physical sheet IDs.",
+    "Dust is per-ID connected pieces <=5; restoration filter is whole IDs with full size >=5000."
+  ],
+  "source_results_sha256": "9ee3b3bd4c2517b62eb04fd525f735e501a9fa92d173a98adf340d8eeaa61e9c",
+  "plan_sha256": "fead8c97796df5d60485c07ea28956e10fbbec9060c5e38512f2b32bd83a91bd",
+  "prediction_freeze_sha256": "d2c20f55efb524b1ca37d6ba1a980ef75d571c7d3d06fc1f16b1b281292a93c0",
+  "ae_checkpoint_sha256": "7c50584852d194a5dd29bc1a4868e7488f88925c55e1303935f3f1042be226e2"
+}

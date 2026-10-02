@@ -1,7 +1,7 @@
 \begin{table}[t]
 \centering
 \small
-\setlength{\tabcolsep}{5pt}
+\setlength{\tabcolsep}{4pt}
 \begin{tabular}{lrrrr}
 \toprule
  & \multicolumn{2}{c}{$b_1$: tunnels} & \multicolumn{2}{c}{$b_2$: cavities} \\
@@ -9,12 +9,9 @@ Method & Mean & Median & Mean & Median \\
 \midrule
 Winner & 40.302 & 20.5 & 0.000 & 0.0 \\
 PLatS & 34.849 & 2.5 & 7.972 & 0.0 \\
+PLatS + repair & 23.321 & 0.0 & 4.802 & 0.0 \\
 \bottomrule
 \end{tabular}
-\caption{Raw binary prediction unions on the same 106 native crops as
-Tables~\ref{tab:lb}--\ref{tab:modified}. Whole-volume Betti counts use
-V construction (six-connected foreground), with equal weight per case.
-No ignore erasure, restoration or additional size filtering is applied;
-each method's existing inference postprocessing is retained.}
+\caption{Full prediction unions before ignore processing on the same 106 native crops. V-construction Betti counts use six-connected foreground and equal case weights. Repair is part of inference; no erasure, restoration or 5,000-voxel evaluation filter is applied here.}
 \label{tab:rawpredbetti}
 \end{table}

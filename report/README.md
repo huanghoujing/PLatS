@@ -81,7 +81,7 @@ The full released-test prediction archives are linked in
 instructions are in [TRAINING.md](../docs/TRAINING.md) and
 [CODE_REVIEW.md](../docs/CODE_REVIEW.md).
 
-## Raw prediction topology (Table 3)
+## Original prediction topology census (Table 3 baselines)
 
 The table contains freshly recomputed Betti counts for the same 106 winner/automatic PLatS
 unions as Tables 1 and 2. No GT or ignore masks are read. The full native volumes
@@ -134,5 +134,44 @@ The original research checkpoints and arrays must be present. The capture is
 saved under `runs_from_260914/evaluation/11_paper_three_method_figures/` in that
 workspace. The exact-plane run is in `runs_from_260914/evaluation/12_paper_slice_seed_example/`.
 Source arrays stay local; rendered PDF/PNG/SVG assets and their
-builders accompany the paper. This revision does not change benchmark results.
+builders accompany the paper. The figure revision itself does not change benchmark results.
 Earlier figure assets and audits remain historical records.
+
+## Fixed repair evaluation (Tables 1--3)
+
+The tables retain their original rows and add PLatS with fixed AE repair,
+guarded per-sheet closing, and dusting. The supplementary ablation includes
+each stage and the winner with the same morphological cleanup. Aggregate
+measurements are in [postprocessing_results.json](postprocessing_results.json);
+the current revision audit is [postprocessing_validation.json](postprocessing_validation.json).
+This is an exploratory extension after inspecting three released-test outliers.
+
+The local research record is
+`runs_from_260914/evaluation/16_postprocessing_hidden106/`: frozen recipe,
+native instance NIFTIs, images/annotation links, per-case scores, output hashes,
+and an HTML comparison. Tiny-piece dusting uses <=5 voxels before scoring;
+the restoration diagnostic separately retains full instances >=5,000 voxels
+with visible support. Table 3 includes inference cleanup but no ignore processing.
+
+Reproduce using the original research workspace and its frozen input manifests:
+
+```bash
+export PLATS_RESEARCH_ROOT=/path/to/research/workspace
+python report/evaluate_postprocessing.py prepare
+# Run these two inference commands concurrently on available GPUs:
+python report/evaluate_postprocessing.py infer --gpu 0 --shard 0
+python report/evaluate_postprocessing.py infer --gpu 2 --shard 1
+python report/evaluate_postprocessing.py winner --workers 16
+python report/evaluate_postprocessing.py freeze
+python report/evaluate_postprocessing.py prepare_scores --workers 16
+python report/evaluate_postprocessing.py score --workers 96
+python report/evaluate_postprocessing.py summarize
+python report/export_results.py --run "$PLATS_RESEARCH_ROOT/runs_from_260914/evaluation/16_postprocessing_hidden106" --paper report
+```
+
+Choose a scoring worker count suitable for available CPU/RAM. The evaluation
+uses the existing exact compact topology backend. Identical masks share one
+score computation; completed atomic score files are reusable. The scoring
+adapter was checked against an unchanged published case with zero difference.
+The original `results_snapshot.json`, checkpoint weights and inference recipe
+are unchanged; the new postprocessing is explicitly a separate inference arm.
