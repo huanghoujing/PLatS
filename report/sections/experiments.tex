@@ -73,6 +73,15 @@ PLatS has the higher restored topology term (0.5820 versus 0.5694), but lower
 surface and VOI scores. Restoration therefore diagnoses erasure sensitivity;
 it does not establish a new challenge ranking.
 
+\paragraph{Topology before ignore processing.}
+Table~\ref{tab:rawpredbetti} counts tunnels ($b_1$) and cavities ($b_2$) in
+the full saved prediction unions, including unannotated regions. PLatS has
+lower mean and median tunnel counts, but its union contains cavities, whereas
+the winner's contains none. These counts characterize prediction topology;
+they are not errors relative to GT or spatially matched TopoScores.
+
+\input{tables/raw_prediction_betti}
+
 \subsection{Sheet geometry and latent identity}
 To separate representation quality from automatic seed selection, we use
 nested GT prompts on 764 eligible annotated bands. Before cleanup or ignore

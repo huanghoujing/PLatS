@@ -57,9 +57,10 @@ is historical, not a certification of every later prose/layout edit. Branch
 validation for the initial cleanup is in
 `../provenance/make_idea_clear_validation.json`; the later recipe/inference
 checks are in `../provenance/late_crop_joint_inference_validation.json`.
-The current CVPR writing/PDF revision is audited in `revision_validation.json`.
-This revision changes presentation and corrects the 0076 GT-query description;
-it adds no new training or evaluation results. Matched ablations, runtime
+The initial CVPR writing revision is audited in `revision_validation.json`.
+It changes presentation and corrects the 0076 GT-query description.
+The current PDF, including the raw-prediction Betti table, is checked in
+`raw_prediction_betti_validation.json`. Matched ablations, runtime
 measurements and spatially disjoint generalization remain open experiments.
 
 Tables cover all 106 released, previously inspected test cubes. Training IDs
@@ -78,3 +79,26 @@ The full released-test prediction archives are linked in
 [the download index](../predictions/README.md). Training and source-reading
 instructions are in [TRAINING.md](../docs/TRAINING.md) and
 [CODE_REVIEW.md](../docs/CODE_REVIEW.md).
+
+## Raw prediction topology (Table 3)
+
+The table contains freshly recomputed Betti counts for the same 106 winner/automatic PLatS
+unions as Tables 1 and 2. No GT or ignore masks are read. The full native volumes
+are used, with no additional erasure, restoration or size filtering. Existing
+inference postprocessing remains in the predictions. Means and medians describe
+these masks, not errors against a reference topology.
+
+The per-case CSV, JSON and input manifest remain in the local experiment folder
+`runs_from_260914/evaluation/09_paper_raw_prediction_betti/` in the research
+workspace. Recompute from that manifest and its frozen prediction files:
+
+```bash
+python report/compute_raw_prediction_betti.py \
+  --manifest /path/to/09_paper_raw_prediction_betti/input_manifest.json \
+  --prediction_root /path/to/research/workspace \
+  --output /tmp/plats-raw-betti --workers 16
+```
+
+The script verifies input hashes and native shapes, and checks agreement with
+the previous raw audit. It needs NumPy/SciPy and the repository source; no GPU,
+model inference or exact feature matching is needed for these whole-mask counts.

@@ -203,6 +203,24 @@ results average sheets within each case and resample 106 cases 2,000 times
 (seed 42); source files preserve all intervals. Spatial dependence and prior
 inspection limit their statistical interpretation.
 
+\paragraph{Raw automatic union census.}
+Table~\ref{tab:rawpredbetti} uses the winner's saved binary mask and the union
+of automatic 0058 instance IDs, exactly as supplied to the original-erasure
+comparison. This differs from the GT-prompted sheet/union census above.
+We recompute all 212 native volumes without loading GT or ignore arrays,
+excluding no region and applying no additional component filter. Existing
+inference cleanup remains part of each method's prediction.
+
+Under V construction, $b_0$ counts six-connected foreground components and
+$b_2$ counts enclosed 26-connected background components; outside the crop is
+background. With Euler characteristic $\chi$, the tunnel count is
+$b_1=b_0+b_2-\chi$. All counts agree with the previous per-case raw audit,
+and all prediction hashes match their inference freezes. PLatS has nonzero
+$b_2$ in 31 of 106 cases (845 cavities in total); the winner has none. Means
+and medians expose this uneven distribution. The standalone census script is
+included with the report; per-case counts and input hashes are retained in
+the local experiment record.
+
 \section{Restoration controls and failure provenance}
 Preserve each predicted identity \emph{before} erasure. Let $A_i$ be its full
 mask, $I$ the source-ignore mask, and $v_i=|A_i\setminus I|$ its visible size.

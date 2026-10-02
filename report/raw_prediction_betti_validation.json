@@ -1,0 +1,44 @@
+{
+  "status": "passed",
+  "created_utc": "2026-10-02T15:55:37.151550+00:00",
+  "base_commit": "b7e517f33b92a55fa751a443503f27ea9d619656",
+  "scope": "Summary table of raw prediction Betti counts; per-case data and manifests remain local.",
+  "pages": {
+    "main": 5,
+    "references": 1,
+    "supplementary": 9,
+    "total": 15
+  },
+  "raw_betti_table_number": 3,
+  "raw_betti_table_page": 4,
+  "census": {
+    "cases_per_method": 106,
+    "prediction_volumes_recomputed": 212,
+    "workers": 16,
+    "wall_seconds": 16.889943453948945,
+    "all_frozen_prediction_hashes_verified": true,
+    "all_counts_match_previous_raw_audit": true,
+    "ignore_masks_or_gt_loaded": false,
+    "additional_filtering": false,
+    "construction": "V",
+    "foreground_connectivity": 6,
+    "background_connectivity": 26
+  },
+  "checks": {
+    "latex_errors": 0,
+    "undefined_references": 0,
+    "overfull_boxes": 0,
+    "tables_1_and_2_unchanged": true,
+    "original_results_snapshot_unchanged": true,
+    "table_render_visually_reviewed": true
+  },
+  "files_sha256": {
+    "README.md": "8a52aeeb5d6d06a711f8706459145c47ee71b6e5698b209e85d3fb56877810f0",
+    "compute_raw_prediction_betti.py": "37a72f4b5c49a5a3ce7d0106f77a2a68abd010b31a49ea33015b13c8ecf46475",
+    "index.html": "65f19ca52b7cac62535a0bd499d6158c7092b881b8f927c5cd85a76f6866e2dd",
+    "report.pdf": "e2ce7225897e1671e50b5a60c8935bbef99cf5309886e11419d9f5b9f63db189",
+    "sections/experiments.tex": "2474593a0a55199f55a8bcece151e8fbc7240ea4f2726698a700d3cafaf7f779",
+    "sections/supplementary.tex": "b239193846aa29e8615a2bcaca21ec31587ec3fdb5dfd7c18ed42962a0282075",
+    "tables/raw_prediction_betti.tex": "c54cabafff7487dbc24e07b77205ca8e3e531f6b0b280a0c9d964c8a479f9d7b"
+  }
+}
