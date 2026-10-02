@@ -70,7 +70,19 @@ def predict(args):
     raw, canvas, valid, bounds, offset = volume(args.image)
     out = Path(args.output)
     out.mkdir(parents=True, exist_ok=True)
-    model, ae, codec = stack(device)
+    foreground_model = None
+    if args.run_dir:
+        from vesuvius_p2sd.joint_inference import load_joint_run
+        model, ae, codec, foreground_model, model_source = load_joint_run(
+            args.run_dir, repository_root=ROOT, device=device,
+            checkpoint_dir=args.checkpoint_dir,
+            load_foreground=args.command == 'automatic' and not args.foreground,
+        )
+    else:
+        model, ae, codec = stack(device)
+        model_source = {'mode': 'released_reference', 'files': {
+            p.stem: str(p) for p in sorted((ROOT / 'weights').glob('*.pt'))
+        }}
     tensor = torch.from_numpy(canvas[None, None].astype(np.float32)).to(device)
     with torch.inference_mode():
         if args.command == 'prompt':
@@ -101,12 +113,21 @@ def predict(args):
             save_nifti(out / 'prompt_points.nii.gz', prompt_map)
             write(out / 'points.json', dict(points=points.tolist(), coordinate_order='input array axes'))
         else:
+            settings = read(ROOT / 'configs/automatic.json')
+            image_context_cache = None
             if args.foreground:
                 fg = np.load(args.foreground) > 0
                 if fg.shape != raw.shape:
                     raise ValueError('Foreground shape must match CT')
                 mask = np.zeros(canvas.shape, bool)
                 mask[bounds] = fg
+            elif foreground_model is not None:
+                with torch.autocast(device.type, dtype=dtype, enabled=device.type == 'cuda'):
+                    image_context_cache = model.encode_image_context_from_image(tensor)
+                    context = foreground_model.refine_context(image_context_cache[3])
+                    logits = foreground_model.decode_context(context)
+                    mask = (logits.float().sigmoid()[0, 0] >= settings['binary_threshold']).cpu().numpy()
+                del logits, context, foreground_model
             else:
                 from vesuvius_p2sd.models.binary_seg import build_binary_seg_model
                 from vesuvius_p2sd.train.common import load_model_state
@@ -115,7 +136,6 @@ def predict(args):
                 with torch.autocast(device.type, dtype=dtype, enabled=device.type == 'cuda'):
                     mask = (proposer(tensor).float().sigmoid()[0, 0] >= 0.6).cpu().numpy()
                 del proposer
-            settings = read(ROOT / 'configs/automatic.json')
             result = auto.run_case_cluster(
                 binseg_model=None,
                 p2sd_model=model,
@@ -126,6 +146,7 @@ def predict(args):
                 device=device,
                 dtype=dtype,
                 external_mask=mask,
+                image_context_cache=image_context_cache,
                 **settings,
             )
             prediction = result['instance_ids'][bounds].astype(np.int16)
@@ -159,9 +180,10 @@ def predict(args):
             canvas_offset=offset.tolist(),
             source_module=auto.__file__,
             code_root=str(ROOT),
-            weights_sha256={
-                p.name: sha(p) for p in sorted((ROOT / 'weights').glob('*.pt'))
-            },
+            model_source=model_source,
+            source_files_sha256={name: sha(path) for name, path in model_source['files'].items()},
+            weights_sha256={Path(path).name: sha(path)
+                            for path in model_source['files'].values() if Path(path).suffix == '.pt'},
         ),
     )
     print(out.resolve())
@@ -199,6 +221,8 @@ def main():
         q.add_argument('--image', required=True)
         q.add_argument('--output', required=True)
         q.add_argument('--device', default='cuda:0')
+        q.add_argument('--run_dir', help='Joint training run; uses its AE, P2SD and co-trained binary head')
+        q.add_argument('--checkpoint_dir', help='Optional matched snapshot directory within a training run')
         q.add_argument('--threads', type=int, default=4)
         if name == 'prompt':
             q.add_argument('--points', required=True)
@@ -214,6 +238,8 @@ def main():
     q.add_argument('--output', required=True)
     sub.add_parser('verify')
     args = p.parse_args()
+    if getattr(args, 'checkpoint_dir', None) and not args.run_dir:
+        p.error('--checkpoint_dir requires --run_dir')
     {'prompt': predict, 'automatic': predict, 'score': score, 'verify': verify}[args.command](args)
 if __name__ == '__main__':
     main()

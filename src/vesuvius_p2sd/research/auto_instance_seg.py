@@ -783,6 +783,7 @@ def run_case_cluster(
     cluster_purge_margin: float = 0.0,
     cluster_purge_disagreement: float = 0.0,
     external_mask: np.ndarray | None = None,
+    image_context_cache=None,
     fuse_dump: bool = False,
     tta: int = 0,
     tta_fuse: str = "mean",
@@ -835,7 +836,12 @@ def run_case_cluster(
             for model in binseg_models:
                 mask = torch.sigmoid(model(tensor).float())[0, 0] >= binary_threshold
                 foreground_mask = mask if foreground_mask is None else foreground_mask & mask
-        _, tokens, coords, context = p2sd_model.encode_image_context_from_image(tensor)
+        # A co-trained foreground head can reuse the same unprompted context.
+        # Callers supply the tuple from this model and this exact input volume.
+        if image_context_cache is None:
+            _, tokens, coords, context = p2sd_model.encode_image_context_from_image(tensor)
+        else:
+            _, tokens, coords, context = image_context_cache
         if hasattr(target_ae, "set_image"):
             target_ae.set_image(tensor)
     foreground = foreground_mask.cpu().numpy()

@@ -88,9 +88,11 @@ def ae_detail():
     save(fig,'ae_modules')
 
 
-def p2sd_detail():
+def p2sd_detail(*, new_recipe=False):
     fig, ax = canvas(9)
-    text(ax,.15,8.65,'P2SD: shared image computation, then compact per-prompt prediction',18,weight='bold')
+    title = ('P2SD: new training recipe with late-stage binary cropping' if new_recipe
+             else 'P2SD: reference model and compact per-prompt prediction')
+    text(ax,.15,8.65,title,18,weight='bold')
     box(ax,.2,7.25,1.35,.8,'CT X\n320³','data')
     box(ax,1.95,7.25,2.1,.8,'Image encoder\nfactor 32')
     box(ax,4.45,7.25,2.45,.8,'Image context\nprojection + 4 blocks')
@@ -120,16 +122,19 @@ def p2sd_detail():
     # Binary auxiliary path branches from unprompted image context.
     box(ax,.2,1.55,2.4,.8,'Binary context refiner\n4 blocks on full F',size=11.8)
     arrow(ax,(5.0,7.25),(1.4,2.35),via=[(5.0,6.98),(.06,6.98),(.06,2.6),(1.4,2.6)])
-    box(ax,3.05,1.55,3,.8,'Binary decoder + head\n5³ context crop → 160³\n5 convolutional upsamples',size=11.8)
+    binary_label = ('Full context → 160³ features\n80³ feature crop → 160³ output\nlast upsample + residual + head' if new_recipe
+                    else 'Binary decoder + head\n5³ context crop → 160³\nreference 0058 recipe')
+    box(ax,3.05,1.55,3,.8,binary_label,size=11.3)
     box(ax,6.5,1.55,2.6,.8,'Union BCE + Dice\nignore-masked GT union','loss',11.8)
     arrow(ax,(2.6,1.95),(3.05,1.95));arrow(ax,(6.05,1.95),(6.5,1.95))
     box(ax,10.2,1.3,3.6,1.12,'Inference / validation only\nDenormalize ẑ → frozen AE D\n→ full-resolution sheet','frozen',12)
     arrow(ax,(13.8,5.78),(13.8,2.42),dashed=True,via=[(13.94,5.78),(13.94,2.62),(13.8,2.62)])
     text(ax,.2,.76,'Blue: trained modules    Green: codes / context    Gray: data or frozen (explicitly labeled)    Gold: losses',11.8)
     text(ax,.2,.32,'No full-resolution sheet decode for the latent training loss. The binary branch still decodes one crop per CT batch.',12)
-    save(fig,'p2sd_modules')
+    save(fig,'p2sd_training_recipe' if new_recipe else 'p2sd_modules')
 
 
 if __name__ == '__main__':
     ae_detail()
     p2sd_detail()
+    p2sd_detail(new_recipe=True)

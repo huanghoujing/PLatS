@@ -60,9 +60,19 @@ head receives weight 1. The fourth auxiliary head is stored in the checkpoint
 but is not used by that objective. Same-sheet prompt consistency (weight .5)
 and different-sheet MSE-margin hinge (weight .25, margin 1) act on final codes.
 
-The binary branch refines the full 10³ grid, then trains on a randomly selected
-5³ context subgrid decoded to 160³ voxels. Its loss is ignore-masked BCE (positive
-weight 2) + Dice. It is trained once per CT batch, not once per prompt group.
+The historical 0058 recipe cropped a 5³ context subgrid before binary decoding.
+The **new training recipe** uses `crop_stage: second_last`: refine all 10³ context
+sites, decode the full 160³ intermediate feature volume, crop 80³ features, then
+run the last ×2 upsampling/residual/head to supervise 160³ output voxels.
+The earlier decoder stages keep full-volume context. `crop_grid: 5` still denotes
+5 × 32 = 160 output voxels per axis. The loss is ignore-masked BCE (positive
+weight 2) + Dice, once per CT batch rather than once per prompt group.
+
+P2SD's optional `latent_distance_head` learns query distances directly from GT
+EDT, independently of the frozen AE query head. Its loss and vertex/query
+utilities remain available. The older `coordinate_query` objective instead
+matches frozen-AE query predictions. The current P2SD-owned head is distance-only;
+query occupancy/GT target utilities also remain in the implicit AE path.
 
 ## Where efficiency comes from
 
@@ -88,13 +98,17 @@ A direct full-resolution per-seed predictor would instead pay its upsampling
 cost for every seed. Our implementation also tests multiple multi-point subsets
 per retained cluster, adding code-prediction work before its final decode.
 Geometric cleanup and full-resolution output storage remain necessary.
-The released automatic recipe uses a separately trained foreground proposer,
-which incurs its own image encoding and full-resolution union decode; do not
-count that work as already shared with the prompted model.
+New-model inference (`plats.py automatic --run_dir ...`) loads the co-trained
+binary head and shares the cached image context with P2SD. It adds one full-volume
+binary decode, not a second CT encoding. The historical released-model path
+(without `--run_dir`) still uses a separately trained proposer and its additional
+encoding; published benchmark results refer to that historical configuration.
 
 During P2SD training the teacher encoder remains necessary, but the frozen AE
 decoder does not execute for the active latent objective. The binary auxiliary
 branch still decodes its 160³ crop, and validation decodes full sheets. Thus the
 efficiency claim concerns repeated prompt processing and supervision, not an
-absence of all upsampling. A wall-clock speedup versus a matched direct decoder
+absence of all upsampling. Moving binary cropping to the final stage increases
+its training activation memory relative to bottleneck cropping. A wall-clock
+speedup versus a matched direct decoder
 requires a controlled benchmark and is not yet claimed.

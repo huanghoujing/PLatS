@@ -54,6 +54,11 @@ connections inside individual blocks are distinct. Its loss updates the
 shared image encoder and image-context blocks. For the reference joint
 training recipe, refinement sees the complete $10^3$ context, then a $5^3$
 context crop is decoded to $160^3$ for ignore-masked binary supervision.
+The new from-scratch recipe instead uses late cropping: decode the full
+$160^3$ intermediate feature grid, crop $80^3$ features, then apply the final
+upsampling stage and head to obtain $160^3$ output supervision. This preserves
+full-volume context in earlier stages, at increased activation-memory cost.
+This recipe change is not retroactively attributed to the scored reference.
 
 \begin{figure*}[t]
  \centering\includegraphics[width=\textwidth]{figures/p2sd_modules.pdf}
@@ -87,6 +92,9 @@ This avoids paying a full upsampling cost for each of the $N$ seed codes
 before clustering. Retained sheets still require dense decoding, output
 storage and cleanup. The released foreground proposer is a separate model
 with its own encoding and full-resolution union decode, adding further cost.
+The new recipe instead uses its co-trained binary head and reuses the same
+cached image context for seed proposal and P2SD. It still incurs one
+full-resolution union decode; it avoids the separate proposer's CT encoding.
 
 During P2SD training, the frozen teacher encoder produces sheet targets, but
 the active latent objective does not require AE decoding. The auxiliary

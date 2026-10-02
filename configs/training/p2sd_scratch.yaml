@@ -129,6 +129,9 @@ p2sd:
   freeze_image_encoder_through_stage: -1
   dense_aux:
     weight: 1.0
+    # Crop from the full 160^3 feature volume before the last upsampling.
+    # crop_grid=5 specifies a 160^3 OUTPUT crop (80^3 features at factor 2).
+    crop_stage: second_last
     crop_grid: 5
     bce_weight: 1.0
     dice_weight: 1.0

@@ -1,0 +1,51 @@
+{
+  "date": "2026-10-02",
+  "base_commit": "053606ddd0fea84ec06ade3eb387d028b8fb37b1",
+  "training": {
+    "status": "passed",
+    "steps_per_stage": 2,
+    "crop": [
+      64,
+      64,
+      64
+    ],
+    "device": "cpu",
+    "output": "/tmp/plats-train-check-iogp8ubd",
+    "scope": "synthetic scratch optimization; not convergence or GPU performance"
+  },
+  "binary_crop_stage": "second_last",
+  "joint_inference": {
+    "status": "passed",
+    "step": 2,
+    "crop": [
+      64,
+      64,
+      64
+    ],
+    "same_trunk_object": true,
+    "binary_logits_bitwise_equal": true,
+    "cached_and_uncached_instances_equal": true,
+    "cached_clustering_extra_image_encodes": 0,
+    "mismatched_checkpoint_steps_rejected": true
+  },
+  "python_syntax": {
+    "status": "passed",
+    "files": [
+      "plats.py",
+      "src/vesuvius_p2sd/joint_inference.py",
+      "src/vesuvius_p2sd/research/auto_instance_seg.py",
+      "tools/check_joint_inference.py",
+      "report/build_architecture_figures.py"
+    ]
+  },
+  "paper": {
+    "pages": 14,
+    "latex_errors": 0,
+    "overfull_boxes": 0,
+    "pdf_sha256": "2d0f5b6c51d64885b3c01e8003f53d1aa64dbab924e3f92c588c9a7d9f23accb",
+    "bibliography_warnings": "Existing missing-year warnings for scrollfiesta and scrollprizeink."
+  },
+  "query_heads_and_losses": "Retained; standalone P2SD query head predicts distance, not occupancy.",
+  "ae_geometric_consistency": "Proposed in documentation; not implemented or enabled.",
+  "scope": "Synthetic 64^3 CPU training and inference; no 320^3 GPU memory, timing or accuracy claim."
+}

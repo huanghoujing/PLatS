@@ -35,18 +35,23 @@ They show the frozen teacher, normalized target, prompt composition, modulator,
 refiner, prediction heads, binary branch and attached losses. The binary branch
 has **no encoder–decoder skip connections**; this corrects the earlier prose.
 The final prediction head is distinct from the auxiliary projections.
+The [new training recipe diagram](figures/p2sd_training_recipe.png) shows
+late binary cropping; the paper figure labels the historical reference recipe.
 
 The efficiency discussion distinguishes tensor sizes from runtime: 1,000 latent
 sites, 64,000 code scalars, shared CT context, and full decoding only when needed.
-It includes the cost of retained-sheet decoding and the separate foreground
-proposer. No wall-clock speedup is claimed without a controlled benchmark.
+It includes retained-sheet decoding and the historical separate foreground
+proposer. New-run inference reuses CT context for its co-trained binary head.
+No wall-clock speedup is claimed without a controlled benchmark.
 
 ## Frozen experimental evidence
 
 `results_snapshot.json` identifies the original experiment inputs and hashes.
 The original `validation.json` records the submission's experimental audit; it
 is historical, not a certification of every later prose/layout edit. Branch
-validation is in `../provenance/make_idea_clear_validation.json`.
+validation for the initial cleanup is in
+`../provenance/make_idea_clear_validation.json`; the later recipe/inference
+checks are in `../provenance/late_crop_joint_inference_validation.json`.
 
 Tables cover all 106 released, previously inspected test cubes. Training IDs
 were excluded; this alone does not certify spatial independence. Ignore-mask

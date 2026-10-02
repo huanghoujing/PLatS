@@ -76,6 +76,10 @@ codes, tests seven eight-point subsets per retained cluster, decodes and resolve
 overlaps using the frozen benchmark settings. Small and unstable clusters are
 excluded. It does not read GT or ignore masks. `--foreground path.npy` optionally
 reuses a binary mask. Final IDs, foreground, seeds and clustering records are saved.
+For a newly trained model, add `--run_dir runs_from_260914/training/p2sd_scratch`.
+This uses the **co-trained binary head** and shares CT context with the point
+model. The new training recipe crops only before the last binary upsampling
+stage; the released reference settings and scores remain historical.
 Set `CUDA_VISIBLE_DEVICES` to select a physical GPU; `--device cuda:0` then uses
 that visible GPU. Process separate crops on separate GPUs for parallel inference.
 

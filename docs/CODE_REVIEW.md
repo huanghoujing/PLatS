@@ -35,6 +35,13 @@ change from the initial readability pass.
   binary BCE/Dice. Their implementations are exposed in a small loss module.
 - Flip/rotation consistency and vertex/query supervision needed by the
   extra-data supplementary models.
+- P2SD-owned coordinate-distance prediction and GT EDT/vertex losses, even if
+  the checkpoint using them is not reported. Retain the older frozen-AE query
+  distillation path as a separate ablation, not a substitute for GT supervision.
+- Coordinate-query occupancy/distance heads and target/loss utilities in the
+  implicit AE decoder. The standalone P2SD query head currently predicts distance;
+  a separate P2SD occupancy-query head still needs wiring. These query mechanisms
+  are not covered by the proposed decoder-removal list above.
 - Optional AE point decoder, prompt modulator variants and decoded/query losses
   useful for focused ablations. Disabled does not by itself mean irrelevant.
 - Existing useful comments, checkpoint key names and public import paths.

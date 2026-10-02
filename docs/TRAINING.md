@@ -7,7 +7,9 @@ branch from random weights. They need no released checkpoints.
 
 This is a **new baseline recipe**, not an exact replay of 0058: that checkpoint
 used earlier P2SD and foreground warm starts. The architecture and active losses
-match the reference, but the new P2SD recipe uses a uniform initial LR of `1e-4`,
+match the reference. The new recipe moves binary cropping to the final
+upsampling stage and uses the co-trained binary head for automatic seed proposal.
+It uses a uniform initial LR of `1e-4`,
 500-step warmup, and cosine decay to 5% of that LR. Its final accuracy has not
 been measured. Historical configurations remain in `provenance/`.
 
@@ -113,8 +115,18 @@ python -m vesuvius_p2sd.train.train_p2sd \
 
 The new AE is frozen. The image encoder, image context, point modules, latent
 heads and binary branch start from random weights. Each CT crop yields four
-sheet/prompt pairs with 1–8 positive points. The binary branch refines the full
-10-cubed context then decodes a 5-cubed context crop into a 160-cubed union mask.
+sheet/prompt pairs with 1–8 positive points. With
+`p2sd.dense_aux.crop_stage=second_last`, the binary branch refines the full
+10³ context and decodes the complete field through the 160³ feature stage.
+It then crops 80³ features and applies the final ×2 upsampling, residual block
+and occupancy head to produce a **160³ output crop** for supervision.
+`crop_grid=5` specifies the output extent (5 × 32 = 160), not a bottleneck crop
+in this mode. Earlier decoder stages therefore retain the full crop context;
+only the last stage sees the training crop boundary. This costs more memory
+than cropping at 10³, while avoiding artificial boundaries in earlier stages.
+
+![New P2SD training recipe](../report/figures/p2sd_training_recipe.png)
+
 No full-resolution prompted sheet decoding is required by the active latent
 training objective. Validation still decodes sheet masks.
 
@@ -124,6 +136,73 @@ matched checkpoint pair is saved in `checkpoints/step_XXXXXX/` (latest three
 retained). Logs, resolved configuration, provenance and validation artifacts
 are in the same run directory. NIFTI visualization is enabled; projection PNGs
 are disabled in these recipes. See `docs/ARCHITECTURE.md` for modules and losses.
+
+## 5. Use the co-trained binary head for automatic seeds
+
+```bash
+python plats.py automatic \
+  --run_dir runs_from_260914/training/p2sd_scratch \
+  --image /path/to/preprocessed_ct_uint8.npy --output outputs/new_model
+```
+
+This loads `last.pt` and `dense_last.pt` from the same step, plus the target AE
+and latent statistics recorded in the training checkpoint. It computes CT
+features/context once, decodes the binary union on the full volume, samples
+foreground seeds, and reuses that context for P2SD code prediction and clustering.
+There is no separately trained foreground proposer in this path. Inference has
+no binary training crop: the co-trained head decodes the full 320³ volume.
+
+For an intermediate evaluation during training, select an immutable snapshot:
+
+```bash
+python plats.py automatic \
+  --run_dir runs_from_260914/training/p2sd_scratch \
+  --checkpoint_dir runs_from_260914/training/p2sd_scratch/checkpoints/step_001000 \
+  --image /path/to/preprocessed_ct_uint8.npy --output outputs/step_001000
+```
+
+The loader rejects a mismatched P2SD/binary step. Prompted inference also accepts
+`--run_dir`/`--checkpoint_dir`, and does not require a binary checkpoint. Source
+paths, steps and SHA256 hashes are saved in `run.json`. Keep the target AE and
+statistics available at their recorded paths. Relative config paths resolve
+against the repository root.
+
+The initial automatic thresholds remain in `configs/automatic.json`; they are
+not validated optima for a new model. Calibrate them on the training-validation
+split. Omitting `--run_dir` intentionally retains the frozen released-model
+reproduction path, including its historical separate proposer.
+
+## Optional query supervision and AE consistency
+
+Keep the P2SD-owned `latent_distance_head` and its GT-distance Smooth L1 loss.
+`p2sd.latent_distance.hidden_dim` creates that head;
+`p2sd.loss.latent_distance.weight` enables supervision from the GT sheet's EDT.
+This differs from `p2sd.loss.coordinate_query`, which distills the frozen AE's
+query predictions and is retained as a separate ablation. The GT-distance branch
+currently requires the optional GPU EDT dependencies (CuPy/cuCIM).
+
+The query sampling/occupancy-target utilities and implicit AE occupancy/distance
+head are retained too. At present the standalone P2SD query head predicts
+**distance only**; a separate GT-supervised P2SD occupancy-query head is not wired
+in this checkout. No query-supervision code is removed. The new default recipe
+keeps these optional objectives disabled rather than silently changing its loss.
+
+Flip/rotation consistency can also be added to AE training. It is not currently
+implemented or enabled by these configs. A proposed output-space term compares
+`A(S_tilde)` with `inverse_g(A(g(S_tilde)))`, where `A = sigmoid(D(E(.)))`,
+`S_tilde` is one corrupted input sheet and `g` is an exact flip/90° rotation.
+Use the transformed **same** corruption and disable latent noise for the
+consistency forward passes (or define a deliberate noise-invariance objective).
+Continue supervising both views against their clean GT sheets. Reconstruction
+losses prevent a trivial constant prediction from satisfying consistency alone.
+
+Start with a small loss weight after reconstruction has stabilized, applying it
+periodically if full decoding is costly. Do not assume `E(g(S)) = g(E(S))` for
+this learned latent representation: latent equivariance is a separate ablation.
+A query-space version could compare occupancy/distance at corresponding `q` and
+`g(q)` with GT supervision, reducing decoder cost, but should follow validation
+of query-head accuracy. Any retrained AE needs fresh latent statistics and
+P2SD training against its new code space.
 
 ## Stop and resume
 
@@ -157,7 +236,16 @@ the model or validate that the dataset/checkpoints exist. Use
 `python tools/check_training_recipe.py` for a short CPU check with synthetic
 64-cubed data, exercising AE optimization, latent statistics, and joint P2SD
 optimization. This checks plumbing, not 320-cubed GPU performance or convergence.
+With the temporary output directory printed by that check, also run:
 
-The public CLI uses the fixed released weights for benchmark reproduction.
-For new models, use the source evaluator with your run directory; do not replace
-released weights or reuse release hashes when recording a new experiment.
+```bash
+python tools/check_joint_inference.py \
+  --run_dir /tmp/plats-train-check-XXXXX/p2sd_scratch
+```
+
+This checks matching checkpoint loading, identical binary predictions with
+cached context, and identical clustering results without a second CT encode.
+
+The public CLI uses released weights when `--run_dir` is omitted and the new
+co-trained stack when it is supplied. Keep these experiment identities separate;
+do not replace released weights or reuse release hashes for new models.
