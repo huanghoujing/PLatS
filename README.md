@@ -2,6 +2,14 @@
 
 Houjing Huang · houjing.huang@gmail.com
 
+## Videos
+
+- [Oral presentation (3:55, captions)](https://github.com/huanghoujing/PLatS/releases/download/v0.1.0-progress-prize/PLatS_oral_CC.mp4)
+- [Official Zarr result demo (2:04)](https://github.com/huanghoujing/PLatS/releases/download/v0.1.0-progress-prize/remote_zarr.mp4)
+- [Labeled Kaggle result demo (2:44)](https://github.com/huanghoujing/PLatS/releases/download/v0.1.0-progress-prize/kaggle_gt_neighbors.mp4)
+
+Videos generated using **GPT-6-Astra xhigh**.
+
 A point-conditioned transformer predicts a single-sheet autoencoder code. The
 frozen decoder reconstructs that sheet; latent-code clustering supports automatic
 instance discovery from a binary foreground. This standalone reproduction bundle
