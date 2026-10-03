@@ -4,11 +4,34 @@ Houjing Huang · houjing.huang@gmail.com
 
 ## Videos
 
-- [Oral presentation (3:55, captions)](https://github.com/huanghoujing/PLatS/releases/download/v0.1.0-progress-prize/PLatS_oral_CC.mp4)
-- [Official Zarr result demo (2:04)](https://github.com/huanghoujing/PLatS/releases/download/v0.1.0-progress-prize/remote_zarr.mp4)
-- [Labeled Kaggle result demo (2:44)](https://github.com/huanghoujing/PLatS/releases/download/v0.1.0-progress-prize/kaggle_gt_neighbors.mp4)
+Click a preview to play. Both segmentation demos use the Kaggle-only **0058**
+PLatS checkpoint. Videos generated using **GPT-6-Astra xhigh**.
 
-Videos generated using **GPT-6-Astra xhigh**.
+### Oral presentation · 3:55
+
+The method and its development: learning compact sheet representations, predicting a sheet from point prompts, and discovering instances automatically.
+
+https://github.com/user-attachments/assets/96abfccb-0c03-45be-9b7a-ed5e281f6a05
+
+[Download MP4](https://github.com/huanghoujing/PLatS/releases/download/v0.1.0-progress-prize/PLatS_oral_CC.mp4)
+
+### Official Zarr result demo · 2:04
+
+Seven scroll crops with automatic instances, one-point decoding, Kaggle 1st-place comparisons, rotating 3D surfaces, and CT textures.
+
+https://github.com/user-attachments/assets/564c6e5b-78dc-4a4b-a367-6ce35ea863cc
+
+[Download MP4](https://github.com/huanghoujing/PLatS/releases/download/v0.1.0-progress-prize/remote_zarr.mp4)
+
+### Labeled Kaggle result demo · 2:44
+
+Neighboring prompted sheets and automatic instances compared with GT and the Kaggle winner, including slice/3D overlays and segmentation metrics.
+
+https://github.com/user-attachments/assets/8d05cfe8-d7e1-4242-a91b-bb8febac0a63
+
+[Download MP4](https://github.com/huanghoujing/PLatS/releases/download/v0.1.0-progress-prize/kaggle_gt_neighbors.mp4)
+
+## Overview
 
 A point-conditioned transformer predicts a single-sheet autoencoder code. The
 frozen decoder reconstructs that sheet; latent-code clustering supports automatic
